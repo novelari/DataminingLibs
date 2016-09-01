@@ -1,4 +1,5 @@
 #pragma once
+#include <cuda_runtime_api.h>
 #include "../../lib_core/include/core_interface.h"
 #include "../../lib_gpu/include/gpu_device.h"
 

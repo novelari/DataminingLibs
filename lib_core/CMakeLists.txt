@@ -47,6 +47,10 @@ source_group(precomp FILES
 )
 
 add_library(lib_core SHARED ${cpp_files})
+if(UNIX)
+	target_compile_features(lib_core PRIVATE cxx_range_for cxx_contextual_conversions cxx_generic_lambdas)
+endif(UNIX)
+
 target_link_libraries(lib_core
 )
 

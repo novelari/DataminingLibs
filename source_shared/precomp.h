@@ -41,7 +41,6 @@
 #include <mutex>
 #include <random>
 #include <thread>
-#include <minmax.h>
 
 #include "global_defines.h"
 

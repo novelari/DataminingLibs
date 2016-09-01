@@ -56,6 +56,10 @@ source_group(precomp FILES
 )
 
 add_library(lib_gpu SHARED ${cpp_files})
+if(UNIX)
+	target_compile_features(lib_gpu PRIVATE cxx_range_for cxx_contextual_conversions cxx_generic_lambdas)
+endif(UNIX)
+
 target_link_libraries(lib_gpu
 	${CUDA_cusparse_LIBRARY}
 	${CUDA_curand_LIBRARY}

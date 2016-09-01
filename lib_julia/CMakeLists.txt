@@ -40,6 +40,10 @@ source_group(precomp FILES
 )
 
 add_library(lib_julia SHARED ${cpp_files})
+if(UNIX)
+	target_compile_features(lib_julia PRIVATE cxx_range_for cxx_contextual_conversions cxx_generic_lambdas)
+endif(UNIX)
+
 target_link_libraries(lib_julia
 	lib_algorithms
 	lib_parsing

@@ -105,14 +105,4 @@ inline bool CsvParser<T>::Parse(sp<lib_data::MlDataFrame<T>> data, Ts& stream) {
 
 template CsvParser<float>::CsvParser();
 template CsvParser<double>::CsvParser();
-template CsvParser<float>::~CsvParser();
-template CsvParser<double>::~CsvParser();
-template bool CsvParser<float>::Parse(sp<lib_data::MlDataFrame<float>> data,
-                                      string filepath);
-template bool CsvParser<double>::Parse(sp<lib_data::MlDataFrame<double>> data,
-                                       string filepath);
-template bool CsvParser<float>::Parse(sp<lib_data::MlDataFrame<float>> data,
-                                      col_array<char>& raw_data);
-template bool CsvParser<double>::Parse(sp<lib_data::MlDataFrame<double>> data,
-                                       col_array<char>& raw_data);
 }

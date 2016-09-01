@@ -73,6 +73,10 @@ source_group(precomp FILES
 )
 
 CUDA_ADD_LIBRARY(lib_algorithms SHARED ${cpp_files})
+if(UNIX)
+	target_compile_features(lib_algorithms PRIVATE cxx_range_for cxx_contextual_conversions cxx_generic_lambdas)
+endif(UNIX)
+
 target_link_libraries(lib_algorithms
 	${CUDA_cusparse_LIBRARY}
 	${CUDA_curand_LIBRARY}

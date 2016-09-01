@@ -37,6 +37,10 @@ source_group(source FILES
 )
 
 add_executable(runnable_test ${cpp_files})
+if(UNIX)
+	target_compile_features(runnable_test PRIVATE cxx_range_for cxx_contextual_conversions cxx_generic_lambdas)
+endif(UNIX)
+
 target_link_libraries(runnable_test
 	${GTEST_LIBRARIES}
 
