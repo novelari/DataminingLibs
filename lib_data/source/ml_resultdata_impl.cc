@@ -1,0 +1,45 @@
+#include "precomp.h"
+
+#include "ml_resultdata_impl.h"
+
+namespace lib_data {
+template <typename T>
+MlResultDataImpl<T>::MlResultDataImpl() {}
+template <typename T>
+inline void MlResultDataImpl<T>::AddSingleValue(string name, T value) {
+  single_val_[name] = value;
+}
+template <typename T>
+inline void MlResultDataImpl<T>::AddMultipleValue(string name,
+                                                  col_array<T> vals) {
+  multiple_val_[name] = std::move(vals);
+}
+template <typename T>
+void MlResultDataImpl<T>::AddPredictions(col_array<col_array<T>> predictions) {
+  predictions_ = std::move(predictions);
+}
+template <typename T>
+inline T MlResultDataImpl<T>::GetSingleValue(string name) {
+  return single_val_[name];
+}
+template <typename T>
+inline col_array<T> &MlResultDataImpl<T>::GetMultipleValue(string name) {
+  return multiple_val_[name];
+}
+
+template <typename T>
+string MlResultDataImpl<T>::ToString() {
+  string result = "";
+  for (auto &pair : single_val_)
+    result += pair.first + std::to_string(pair.second) + "\r\n";
+  for (auto &pair : multiple_val_) {
+    result += pair.first + "[";
+    for (auto &val : pair.second) result += std::to_string(val) + ",";
+    result += "]\r\n";
+  }
+  return result;
+}
+
+template MlResultDataImpl<float>::MlResultDataImpl();
+template MlResultDataImpl<double>::MlResultDataImpl();
+}
