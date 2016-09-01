@@ -27,7 +27,6 @@ set(cpp_files
 	./source/ml_algorithm_params_impl.h
 	./source/gpu_algorithm.h
 	./source/gpurf.h
-	./source/gpudte.h
 
 
 	./source/ml_algorithm_params_impl.cc
@@ -36,19 +35,16 @@ set(cpp_files
 	../source_shared/precomp.cc
 	./source/gpu_algorithm.cc
 	./source/gpurf.cu
-	./source/gpudte.cu
 )
 
 source_group(source FILES
 	./source/ml_algorithm_params_impl.h
 	./source/gpu_algorithm.h
 	./source/gpurf.h
-	./source/gpudte.h
 
 	./source/ml_algorithm_params_impl.cc
 	./source/gpu_algorithm.cc
 	./source/gpurf.cu
-	./source/gpudte.cu
 )
 
 source_group(interface FILES
