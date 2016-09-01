@@ -623,7 +623,7 @@ __device__ void GpuRf<T>::gpurf_initialize_tree_batch(
            ii < params->dataset_info->nr_instances /
                     params->dataset_info->nr_target_values;
            ii += blockDim.x) {
-        localCursor = AtomicAdd(&s_indexCursor, 1);
+        localCursor = GpuRfStatic::AtomicAdd(&s_indexCursor, 1);
         if (targetEnd - targetStart > 0)
           randVal =
               targetStart + curand(&localState) % (targetEnd - targetStart);
@@ -654,7 +654,7 @@ __device__ void GpuRf<T>::gpurf_initialize_tree_batch(
     root.parent_id = -2;
     root.attribute = -2;
     root.split_point = -2;
-    root.trackinid = AtomicAdd(&params->node_cursors[node_id_], 1);
+    root.trackinid = GpuRfStatic::AtomicAdd(&params->node_cursors[node_id_], 1);
     root.node_index_start = treeOffset;
     root.node_index_count = s_indexCursor;
 
@@ -697,10 +697,10 @@ __device__ void GpuRf<T>::gpurf_find_split(GpuRfStatic::GpuParams<T>* params) {
                                      [s_tree_node.node_index_start + i];
     switch (params->dataset_info->data_type) {
       case type_classification_:
-        AtomicAdd(&s_dynamic_shared[int(params->target_data[inst])], T(1));
+        GpuRfStatic::AtomicAdd(&s_dynamic_shared[int(params->target_data[inst])], T(1));
         break;
       case type_regression_:
-        AtomicAdd(&s_dynamic_shared[0], params->target_data[inst]);
+        GpuRfStatic::AtomicAdd(&s_dynamic_shared[0], params->target_data[inst]);
         break;
     }
   }
@@ -876,13 +876,13 @@ __device__ void GpuRf<T>::gpurf_oob_estimate(
       }
 
       if (params->target_data[instanceId] == classSelector)
-        AtomicAdd(&params->oobCounts[0], 1);
+        GpuRfStatic::AtomicAdd(&params->oobCounts[0], 1);
       else
-        AtomicAdd(&params->oobCounts[1], 1);
+        GpuRfStatic::AtomicAdd(&params->oobCounts[1], 1);
       break;
     }
     case type_regression_:
-      AtomicAdd(&params->mse[0],
+      GpuRfStatic::AtomicAdd(&params->mse[0],
                 params->probability_tmp_buffer[tree_node.probability_start]);
       break;
   }
@@ -954,13 +954,13 @@ __device__ void GpuRf<T>::gpurf_feature_importance(
       }
 
       if (params->target_data[instanceId] == classSelector)
-        AtomicAdd(&params->oobCounts[randAttribute * 2], 1);
+        GpuRfStatic::AtomicAdd(&params->oobCounts[randAttribute * 2], 1);
       else
-        AtomicAdd(&params->oobCounts[randAttribute * 2 + 1], 1);
+        GpuRfStatic::AtomicAdd(&params->oobCounts[randAttribute * 2 + 1], 1);
       break;
     }
     case type_regression_:
-      AtomicAdd(&params->mse[randAttribute],
+      GpuRfStatic::AtomicAdd(&params->mse[randAttribute],
                 params->probability_tmp_buffer[tree_node.probability_start]);
       break;
   }
@@ -996,16 +996,16 @@ __device__ void GpuRf<T>::radix_sort_on_attribute(
   unsigned char* dataVal;
   for (int i = threadIdx.x; i < node.node_index_count; i += blockDim.x) {
     dataVal = (unsigned char*)&input[indices[i]];
-    AtomicAdd(&s_histograms[*dataVal], unsigned int(1));
-    AtomicAdd(&s_histograms[256 + (*(dataVal + 1))], unsigned int(1));
-    AtomicAdd(&s_histograms[512 + (*(dataVal + 2))], unsigned int(1));
-    AtomicAdd(&s_histograms[768 + (*(dataVal + 3))], unsigned int(1));
+    GpuRfStatic::AtomicAdd(&s_histograms[*dataVal], unsigned int(1));
+    GpuRfStatic::AtomicAdd(&s_histograms[256 + (*(dataVal + 1))], unsigned int(1));
+    GpuRfStatic::AtomicAdd(&s_histograms[512 + (*(dataVal + 2))], unsigned int(1));
+    GpuRfStatic::AtomicAdd(&s_histograms[768 + (*(dataVal + 3))], unsigned int(1));
   }
 
   __syncthreads();
 
   for (int i = threadIdx.x + 128; i < 256; i += blockDim.x)
-    AtomicAdd(&s_nrNegativeValues, s_histograms[768 + i]);
+    GpuRfStatic::AtomicAdd(&s_nrNegativeValues, s_histograms[768 + i]);
 
   // Radix sort, j is the pass number (0=LSB, 3=MSB)
   bool performPass;
@@ -1042,7 +1042,7 @@ __device__ void GpuRf<T>::radix_sort_on_attribute(
           __syncthreads();
 
           if (!skip) {
-            AtomicAdd(&curCount[radix], unsigned int(1));
+            GpuRfStatic::AtomicAdd(&curCount[radix], unsigned int(1));
             for (int ii = threadIdx.x; ii > 0; --ii)
               if (s_thread_radix[ii - 1] == radix) ++spot;
             indices2[spot] = id;
@@ -1098,9 +1098,9 @@ __device__ void GpuRf<T>::radix_sort_on_attribute(
 
           if (!skip) {
             if (radix < 128)
-              AtomicAdd((int*)&s_offsets[radix], 1);
+              GpuRfStatic::AtomicAdd((int*)&s_offsets[radix], 1);
             else
-              AtomicAdd((int*)&s_offsets[radix], -1);
+              GpuRfStatic::AtomicAdd((int*)&s_offsets[radix], -1);
 
             for (int ii = threadIdx.x; ii > 0; --ii)
               if (s_thread_radix[ii - 1] == radix) spot += radix < 128 ? 1 : -1;
@@ -1199,10 +1199,10 @@ __device__ T GpuRf<T>::eval_numeric_attribute(
                            params->dataset_info->nr_instances, params->dataset);
       }
 
-      AtomicAdd(&curr_dist[params->dataset_info->nr_target_values +
+      GpuRfStatic::AtomicAdd(&curr_dist[params->dataset_info->nr_target_values +
                            s_offsets[threadIdx.x]],
                 T(1));
-      AtomicAdd(&curr_dist[s_offsets[threadIdx.x]], T(-1));
+      GpuRfStatic::AtomicAdd(&curr_dist[s_offsets[threadIdx.x]], T(-1));
     }
 
     __syncthreads();
@@ -1288,12 +1288,12 @@ __device__ T GpuRf<T>::eval_numeric_attribute(
                          params->dataset_info->nr_instances, params->dataset);
 
     if (val != -flt_max)
-      AtomicAdd(&curr_dist[params->dataset_info->nr_target_values *
+      GpuRfStatic::AtomicAdd(&curr_dist[params->dataset_info->nr_target_values *
                                ((val < tmp_node.tmp_split) ? 0 : 1) +
                            int(params->target_data[inst])],
                 T(1));
     else
-      AtomicAdd(&curr_dist[int(params->target_data[inst])], T(1));
+      GpuRfStatic::AtomicAdd(&curr_dist[int(params->target_data[inst])], T(1));
   }
 
   return bestResponse;
@@ -1321,7 +1321,7 @@ GpuRf<T>::variance_calculation(GpuRfStatic::GpuParams<T>* params,
     val = get_data_point(attribute, inst, params->dataset_info->nr_instances,
                          params->dataset);
 
-    if (val != -flt_max) AtomicAdd(&curr_dist[1], params->target_data[inst]);
+    if (val != -flt_max) GpuRfStatic::AtomicAdd(&curr_dist[1], params->target_data[inst]);
   }
 
   __syncthreads();
@@ -1346,8 +1346,8 @@ GpuRf<T>::variance_calculation(GpuRfStatic::GpuParams<T>* params,
                            params->dataset_info->nr_instances, params->dataset);
       }
 
-      AtomicAdd(&curr_dist[0], val);
-      AtomicAdd(&curr_dist[1], -val);
+      GpuRfStatic::AtomicAdd(&curr_dist[0], val);
+      GpuRfStatic::AtomicAdd(&curr_dist[1], -val);
     }
 
     __syncthreads();
@@ -1431,8 +1431,8 @@ GpuRf<T>::variance_calculation(GpuRfStatic::GpuParams<T>* params,
                          params->dataset);
 
     if (val != -flt_max) {
-      AtomicAdd(&curr_dist[(val < tmp_node.tmp_split) ? 0 : 1], T(1));
-      AtomicAdd(&curr_dist[(val < tmp_node.tmp_split) ? 2 : 3], val);
+      GpuRfStatic::AtomicAdd(&curr_dist[(val < tmp_node.tmp_split) ? 0 : 1], T(1));
+      GpuRfStatic::AtomicAdd(&curr_dist[(val < tmp_node.tmp_split) ? 2 : 3], val);
     }
   }
 
@@ -1568,10 +1568,10 @@ __device__ T GpuRf<T>::evaluate_nominal_attribute(
     val = get_data_point(tmp_node.tmp_attribute, inst, nr_instances, dataset);
 
     if (val != -flt_max)
-      AtomicAdd(&curr_dist[nr_targets * int(val) + int(targer_data[inst])],
+      GpuRfStatic::AtomicAdd(&curr_dist[nr_targets * int(val) + int(targer_data[inst])],
                 weight);
     else
-      AtomicAdd(&curr_dist[int(targer_data[inst])], weight);
+      GpuRfStatic::AtomicAdd(&curr_dist[int(targer_data[inst])], weight);
   }
 
   __syncthreads();
@@ -1646,15 +1646,15 @@ __device__ void GpuRf<T>::gpudte_perform_split(
     switch (dataset_info.data_type) {
       case type_classification_:
         if (data_point < s_tree_node.split_point)
-          ind_position = AtomicAdd(&node_counts[0], 1);
+          ind_position = GpuRfStatic::AtomicAdd(&node_counts[0], 1);
         else
-          ind_position = AtomicAdd(&node_counts[1], 1);
+          ind_position = GpuRfStatic::AtomicAdd(&node_counts[1], 1);
         break;
       case type_regression_:
         if (data_point < s_tree_node.split_point)
-          ind_position = AtomicAdd(&node_counts[0], 1);
+          ind_position = GpuRfStatic::AtomicAdd(&node_counts[0], 1);
         else
-          ind_position = AtomicAdd(&node_counts[1], 1);
+          ind_position = GpuRfStatic::AtomicAdd(&node_counts[1], 1);
         break;
     }
 
@@ -1688,13 +1688,13 @@ __device__ void GpuRf<T>::gpudte_perform_split(
       s_tree_node.attribute = -1;
       s_tree_node.split_point = -1;
     } else {
-      int child_start = AtomicAdd(&node_cursors[work_cursor_], child_count);
-      AtomicAdd(&node_cursors[new_nodes_], child_count);
+      int child_start = GpuRfStatic::AtomicAdd(&node_cursors[work_cursor_], child_count);
+      GpuRfStatic::AtomicAdd(&node_cursors[new_nodes_], child_count);
 
       index_offset = 0;
       child.node_index_start = s_tree_node.node_index_start;
       for (int i = 0; i < child_count; ++i) {
-        child.trackinid = AtomicAdd(&node_cursors[node_id_], 1);
+        child.trackinid = GpuRfStatic::AtomicAdd(&node_cursors[node_id_], 1);
         child.node_index_count = node_counts[i] - index_offset;
         index_offset += node_counts[i];
 
@@ -1779,34 +1779,30 @@ __device__ void GpuRf<T>::gpudte_predict(
       }
 
       T add = 1;
-      AtomicAdd(&predictions[instanceId * nr_targets + classSelector], add);
+      GpuRfStatic::AtomicAdd(&predictions[instanceId * nr_targets + classSelector], add);
       break;
     }
     case type_regression_:
       T mean = probability_buffer[tree_node.probability_start];
-      AtomicAdd(&predictions[instanceId], mean);
+      GpuRfStatic::AtomicAdd(&predictions[instanceId], mean);
       break;
   }
 }
 
-template <typename T>
-__device__ float GpuRf<T>::AtomicAdd(float* address, float value) {
+__device__ float GpuRfStatic::AtomicAdd(float* address, float value) {
   return atomicAdd(address, value);
 }
 
-template <typename T>
-__device__ int GpuRf<T>::AtomicAdd(int* address, int value) {
+__device__ int GpuRfStatic::AtomicAdd(int* address, int value) {
   return atomicAdd(address, value);
 }
 
-template <typename T>
-__device__ unsigned int GpuRf<T>::AtomicAdd(unsigned int* address,
-                                            unsigned int value) {
+__device__ unsigned int GpuRfStatic::AtomicAdd(unsigned int* address,
+                                               unsigned int value) {
   return atomicAdd(address, value);
 }
 
-template <typename T>
-__device__ double GpuRf<T>::AtomicAdd(double* address, double value) {
+__device__ double GpuRfStatic::AtomicAdd(double* address, double value) {
   unsigned long long oldval, newval, readback;
 
   oldval = __double_as_longlong(*address);

@@ -113,6 +113,11 @@ class GpuRfStatic {
     T *mse;
   };
 
+  static __device__ float AtomicAdd(float *address, float value);
+  static __device__ int AtomicAdd(int *address, int value);
+  static __device__ unsigned int AtomicAdd(unsigned int *address, unsigned int value);
+  static __device__ double AtomicAdd(double *address, double value);
+
  private:
   GpuRfStatic() = delete;
   ~GpuRfStatic() = delete;
@@ -201,11 +206,6 @@ class GpuRf : public MlAlgorithm<T> {
       int tid, int nr_instances, int data_type, int nr_targets,
       GpuRfStatic::gpuDTE_NodeHeader_Classify<T> *node_buffer, T *dataset,
       T *probability_buffer, T *predictions, int *attribute_types);
-
-  __device__ float AtomicAdd(float *address, float value);
-  __device__ int AtomicAdd(int *address, int value);
-  __device__ unsigned int AtomicAdd(unsigned int *address, unsigned int value);
-  __device__ double AtomicAdd(double *address, double value);
 
   __device__ void gpurf_setup_kernel(GpuRfStatic::GpuParams<T> *params);
   __device__ void gpurf_initialize_tree_batch(
