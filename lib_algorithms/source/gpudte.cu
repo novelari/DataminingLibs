@@ -81,7 +81,7 @@ __device__ T GpuDte<T>::evaluate_nominal_attribute(
     val = GpuDte::get_data_point(tmp_node.tmp_attribute, inst, nr_instances,
                                  dataset);
 
-    if (val != -FLT_MAX)
+    if (val != -flt_max)
       AtomicAdd(&curr_dist[nr_targets * int(val) + int(targer_data[inst])],
                 weight);
     else
@@ -272,7 +272,7 @@ __device__ void GpuDte<T>::gpudte_predict(
   while (tree_node.child_count > 0) {
     dataPoint = GpuDte::get_data_point(tree_node.attribute, instanceId,
                                        nr_instances, dataset);
-    if (dataPoint != -FLT_MAX) {
+    if (dataPoint != -flt_max) {
       tree_node = (dataPoint < tree_node.split_point)
                       ? node_buffer[tree_node.child_start]
                       : node_buffer[tree_node.child_start + 1];

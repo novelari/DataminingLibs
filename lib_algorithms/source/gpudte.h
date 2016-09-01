@@ -21,6 +21,7 @@ class GpuDte : public MlAlgorithm<T> {
 #define node_id_ 2
 #define new_nodes_ 1
 #define work_cursor_ 0
+#define flt_max 3.402823466e+38F
 
   struct gpuDTE_StaticInfo {
     int total_trees;

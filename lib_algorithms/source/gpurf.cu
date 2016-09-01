@@ -834,7 +834,7 @@ __device__ void GpuRf<T>::gpurf_oob_estimate(GpuParams* params) {
                                        params->dataset);
     if (attribute_type > max_nominal_ ||
         params->dataset_info->data_type == type_regression_) {
-      if (dataPoint != -FLT_MAX)
+      if (dataPoint != -flt_max)
         tree_node =
             (dataPoint < tree_node.split_point)
                 ? params->node_buffers_classify[tree_node.child_start]
@@ -842,7 +842,7 @@ __device__ void GpuRf<T>::gpurf_oob_estimate(GpuParams* params) {
       else
         tree_node = params->node_buffers_classify[tree_node.child_start];
     } else {
-      if (dataPoint != -FLT_MAX)
+      if (dataPoint != -flt_max)
         tree_node =
             params
                 ->node_buffers_classify[tree_node.child_start + int(dataPoint)];
@@ -912,7 +912,7 @@ __device__ void GpuRf<T>::gpurf_feature_importance(GpuParams* params) {
                                           params->dataset);
     if (attribute_type > max_nominal_ ||
         params->dataset_info->data_type == type_regression_) {
-      if (dataPoint != -FLT_MAX)
+      if (dataPoint != -flt_max)
         tree_node =
             (dataPoint < tree_node.split_point)
                 ? params->node_buffers_classify[tree_node.child_start]
@@ -920,7 +920,7 @@ __device__ void GpuRf<T>::gpurf_feature_importance(GpuParams* params) {
       else
         tree_node = params->node_buffers_classify[tree_node.child_start];
     } else {
-      if (dataPoint != -FLT_MAX)
+      if (dataPoint != -flt_max)
         tree_node =
             params
                 ->node_buffers_classify[tree_node.child_start + int(dataPoint)];
@@ -1282,7 +1282,7 @@ __device__ T GpuRf<T>::eval_numeric_attribute(GpuParams* params,
                                     params->dataset_info->nr_instances,
                                     params->dataset);
 
-    if (val != -FLT_MAX)
+    if (val != -flt_max)
       GpuDte<T>::AtomicAdd(&curr_dist[params->dataset_info->nr_target_values *
                                           ((val < tmp_node.tmp_split) ? 0 : 1) +
                                       int(params->target_data[inst])],
@@ -1315,7 +1315,7 @@ __device__ T GpuRf<T>::variance_calculation(GpuParams* params,
     val = GpuDte<T>::get_data_point(
         attribute, inst, params->dataset_info->nr_instances, params->dataset);
 
-    if (val != -FLT_MAX)
+    if (val != -flt_max)
       GpuDte<T>::AtomicAdd(&curr_dist[1], params->target_data[inst]);
   }
 
@@ -1425,7 +1425,7 @@ __device__ T GpuRf<T>::variance_calculation(GpuParams* params,
     val = GpuDte<T>::get_data_point(
         attribute, inst, params->dataset_info->nr_instances, params->dataset);
 
-    if (val != -FLT_MAX) {
+    if (val != -flt_max) {
       GpuDte<T>::AtomicAdd(&curr_dist[(val < tmp_node.tmp_split) ? 0 : 1],
                            T(1));
       GpuDte<T>::AtomicAdd(&curr_dist[(val < tmp_node.tmp_split) ? 2 : 3], val);
