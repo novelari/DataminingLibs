@@ -80,7 +80,11 @@ class GpuRfStatic {
   };
 
   template <typename T>
-  struct GpuParams {
+  class GpuParams {
+   public:
+    GpuParams(){};
+    ~GpuParams() {}
+
     void init();
     void finalize();
 

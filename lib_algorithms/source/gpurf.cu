@@ -970,8 +970,8 @@ template <typename T>
 __device__ void GpuRf<T>::radix_sort_on_attribute(
     GpuRfStatic::GpuParams<T>* params,
     GpuRfStatic::gpuDTE_NodeHeader_Train<T>& node,
-    GpuRfStatic::gpuDTE_TmpNodeValues<T>& tmp_node, unsigned s_histograms[1024],
-    unsigned s_offsets[256]) {
+    GpuRfStatic::gpuDTE_TmpNodeValues<T>& tmp_node, unsigned int s_histograms[1024],
+    unsigned int s_offsets[256]) {
   __shared__ unsigned int s_nrNegativeValues;
   __shared__ unsigned char s_thread_radix[64];
 
@@ -996,10 +996,10 @@ __device__ void GpuRf<T>::radix_sort_on_attribute(
   unsigned char* dataVal;
   for (int i = threadIdx.x; i < node.node_index_count; i += blockDim.x) {
     dataVal = (unsigned char*)&input[indices[i]];
-    GpuRfStatic::AtomicAdd(&s_histograms[*dataVal], unsigned int(1));
-    GpuRfStatic::AtomicAdd(&s_histograms[256 + (*(dataVal + 1))], unsigned int(1));
-    GpuRfStatic::AtomicAdd(&s_histograms[512 + (*(dataVal + 2))], unsigned int(1));
-    GpuRfStatic::AtomicAdd(&s_histograms[768 + (*(dataVal + 3))], unsigned int(1));
+    GpuRfStatic::AtomicAdd(&s_histograms[*dataVal], 1);
+    GpuRfStatic::AtomicAdd(&s_histograms[256 + (*(dataVal + 1))], 1);
+    GpuRfStatic::AtomicAdd(&s_histograms[512 + (*(dataVal + 2))], 1);
+    GpuRfStatic::AtomicAdd(&s_histograms[768 + (*(dataVal + 3))], 1);
   }
 
   __syncthreads();
@@ -1042,7 +1042,7 @@ __device__ void GpuRf<T>::radix_sort_on_attribute(
           __syncthreads();
 
           if (!skip) {
-            GpuRfStatic::AtomicAdd(&curCount[radix], unsigned int(1));
+            GpuRfStatic::AtomicAdd(&curCount[radix], 1);
             for (int ii = threadIdx.x; ii > 0; --ii)
               if (s_thread_radix[ii - 1] == radix) ++spot;
             indices2[spot] = id;
@@ -1817,6 +1817,8 @@ __device__ double GpuRfStatic::AtomicAdd(double* address, double value) {
   return __longlong_as_double(oldval);
 }
 
+template GpuRfStatic::GpuParams<float>::GpuParams();
+template GpuRfStatic::GpuParams<double>::GpuParams();
 template GpuRf<float>::GpuRf();
 template GpuRf<double>::GpuRf();
 }
