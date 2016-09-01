@@ -12,6 +12,7 @@ set(dir_list
 	../lib_data/source
 	../lib_gpu/source
 	../lib_core/source
+	../lib_ensembles/source
 	../lib_algorithms/test
 	../lib_julia/test
 	../lib_parsing/test 
@@ -19,6 +20,7 @@ set(dir_list
 	../lib_data/test
 	../lib_gpu/test
 	../lib_core/test
+	../lib_ensembles/test
 	../lib_algorithms/include
 	../lib_julia/include
 	../lib_parsing/include
@@ -26,6 +28,7 @@ set(dir_list
 	../lib_data/include
 	../lib_gpu/include
 	../lib_core/include
+	../lib_ensembles/include
 )
 
 set(cpp_files
@@ -51,6 +54,7 @@ target_link_libraries(runnable_test
 	lib_data
 	lib_gpu
 	lib_core
+	lib_ensembles
 )
 
 include_directories(runnable_test

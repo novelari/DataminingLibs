@@ -33,6 +33,7 @@ add_subdirectory(./lib_parsing)
 add_subdirectory(./lib_models)
 add_subdirectory(./lib_data)
 add_subdirectory(./lib_gpu)
+add_subdirectory(./lib_ensembles)
 
 if(GTEST_FOUND)
 	add_subdirectory(./runnable_test)

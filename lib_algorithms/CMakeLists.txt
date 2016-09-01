@@ -14,8 +14,6 @@ set(dir_list
 )
 
 set(cpp_files
-	./test/test_gpurf.h
-
 	../source_shared/precomp.h
 	../source_shared/include/global_defines.h
 
@@ -26,7 +24,6 @@ set(cpp_files
 
 	./source/ml_algorithm_params_impl.h
 	./source/gpu_algorithm.h
-	./source/gpurf.h
 
 
 	./source/ml_algorithm_params_impl.cc
@@ -34,17 +31,14 @@ set(cpp_files
 	./source/ml_algorithm.cc
 	../source_shared/precomp.cc
 	./source/gpu_algorithm.cc
-	./source/gpurf.cu
 )
 
 source_group(source FILES
 	./source/ml_algorithm_params_impl.h
 	./source/gpu_algorithm.h
-	./source/gpurf.h
 
 	./source/ml_algorithm_params_impl.cc
 	./source/gpu_algorithm.cc
-	./source/gpurf.cu
 )
 
 source_group(interface FILES
@@ -58,7 +52,6 @@ source_group(interface FILES
 )
 
 source_group(test FILES
-	./test/test_gpurf.h
 )
 
 source_group(precomp FILES
@@ -68,16 +61,12 @@ source_group(precomp FILES
 	../source_shared/precomp.cc
 )
 
-CUDA_ADD_LIBRARY(lib_algorithms SHARED ${cpp_files})
+add_library(lib_algorithms SHARED ${cpp_files})
 if(UNIX)
 	target_compile_features(lib_algorithms PRIVATE cxx_range_for cxx_contextual_conversions cxx_generic_lambdas)
 endif(UNIX)
 
 target_link_libraries(lib_algorithms
-	${CUDA_cusparse_LIBRARY}
-	${CUDA_curand_LIBRARY}
-	${CUDA_LIBRARIES}
-
 	lib_models
 	lib_data
 	lib_parsing
@@ -87,7 +76,6 @@ target_link_libraries(lib_algorithms
 
 include_directories(
 	${dir_list}
-	${CUDA_INCLUDE_DIRS}
 )
 
 if (MSVC)

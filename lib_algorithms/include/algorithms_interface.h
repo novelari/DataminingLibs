@@ -10,36 +10,13 @@ class DLLExport AlgorithmsInterface {
 
   enum AlgorithmType { kClassification = 0, kRegression };
 
-  /**
-  * \brief
-  *	Create a GpuRf algorithm handle
-  *
-  * \return
-  * ::sp<MlAlgorithm>
-  */
+  sp<MlAlgorithmParams> CreateAlgorithmParams(int size);
+
   template <typename T>
-  sp<MlAlgorithm<T>> CreateGpuRfAlgorithm();
-  sp<MlAlgorithmParams> CreateGpuRfParamPack();
-  enum CommonParams {
-	  kDevId = 0,
-
-	  kCommonEndMarker
-  };
-  enum DteParams {
-	  kNrTrees = kCommonEndMarker,
-	  kAlgoType,
-	  kNrFeatures,
-	  kMaxDepth,
-	  kMinNodeSize,
-	  kEasyEnsemble,
-	  kBagging,
-
-	  kDteEndMarker
-  };
-  
+  sp<MlAlgorithm<T>> CreateGpuAlgorithm(sp<MlAlgorithm<T>> algo);
 
  private:
-  AlgorithmsInterface();
-  ~AlgorithmsInterface();
+  AlgorithmsInterface() {}
+  ~AlgorithmsInterface() {}
 };
 }

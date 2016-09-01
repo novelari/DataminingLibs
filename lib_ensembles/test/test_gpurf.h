@@ -3,6 +3,7 @@
 #include "lib_data.h"
 #include "lib_models.h"
 #include "lib_parsing.h"
+#include "lib_ensembles.h"
 
 namespace lib_algorithms {
 char csv_data_fit[] = {
@@ -33,27 +34,28 @@ col_array<char> raw_data_predict(csv_data_predict,
 
 auto &algorithms_face = AlgorithmsLib::GetInstance();
 auto &parser_face = ParsingLib::GetInstance();
+auto &ensembles_face = EnsemblesLib::GetInstance();
 
 sp<lib_models::MlModel> model;
-auto gpurf = algorithms_face.CreateGpuRfAlgorithm<float>();
+auto gpurf = ensembles_face.CreateGpuRfAlgorithm<float>();
 
 TEST(lib_algorithms, gpurf_fit) {
-  //auto data = parser_face.ParseData<float>(lib_parsing::ParsingInterface::kCsv,
-  //                                         raw_data_fit);
+  auto data = parser_face.ParseData<float>(lib_parsing::ParsingInterface::kCsv,
+                                           raw_data_fit);
 
-  auto data = parser_face.ParseFile<float>(lib_parsing::ParsingInterface::kCsv,
-	  "../../runnable_test/spambase.csv");
-  auto params = algorithms_face.CreateGpuRfParamPack();
-  params->Set(AlgorithmsLib::kNrTrees, 100);
-  params->Set(AlgorithmsLib::kAlgoType, AlgorithmsLib::kClassification);
+  /*auto data = parser_face.ParseFile<float>(lib_parsing::ParsingInterface::kCsv,
+	  "../../runnable_test/spambase.csv");*/
+  auto params = ensembles_face.CreateGpuRfParamPack();
+  params->Set(EnsemblesLib::kNrTrees, 100);
+  params->Set(EnsemblesLib::kAlgoType, AlgorithmsLib::kClassification);
   model = gpurf->Fit(data, params);
 }
 
 TEST(lib_algorithms, gpurf_predict) {
   auto data = parser_face.ParseData<float>(lib_parsing::ParsingInterface::kCsv,
                                            raw_data_predict);
-  auto params = algorithms_face.CreateGpuRfParamPack();
-  params->Set(AlgorithmsLib::kNrTrees, 100);
+  auto params = ensembles_face.CreateGpuRfParamPack();
+  params->Set(EnsemblesLib::kNrTrees, 100);
   auto results = gpurf->Predict(data, model, params);
 }
 }
