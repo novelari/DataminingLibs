@@ -27,14 +27,17 @@ class GpuRf : public lib_algorithms::MlAlgorithm<T> {
   GpuRf();
   ~GpuRf();
 
-  sp<lib_models::MlModel> Fit(sp<lib_data::MlDataFrame<T>> data,
-                              sp<lib_algorithms::MlAlgorithmParams> params) override;
-  sp<lib_data::MlResultData<T>> Predict(sp<lib_data::MlDataFrame<T>> data,
-                                        sp<lib_models::MlModel> model,
-                                        sp<lib_algorithms::MlAlgorithmParams> params) override;
+  sp<lib_models::MlModel> Fit(
+      sp<lib_data::MlDataFrame<T>> data,
+      sp<lib_algorithms::MlAlgorithmParams> params) override;
+  sp<lib_data::MlResultData<T>> Predict(
+      sp<lib_data::MlDataFrame<T>> data, sp<lib_models::MlModel> model,
+      sp<lib_algorithms::MlAlgorithmParams> params) override;
 
   sp<lib_models::MlModel> AggregateModels(
       col_array<sp<lib_models::MlModel>> models) override;
+  col_array<sp<lib_models::MlModel>> SplitModel(sp<lib_models::MlModel> model,
+                                                const int parts) override;
   sp<lib_data::MlResultData<T>> AggregateResults(
       col_array<sp<lib_data::MlResultData<T>>> results) override;
   col_array<sp<lib_algorithms::MlAlgorithmParams>> SplitParameterPack(
@@ -70,8 +73,7 @@ class GpuRf : public lib_algorithms::MlAlgorithm<T> {
 
  public:
   __device__ void gpurf_setup_kernel(GpuDte::GpuParams<T> *params);
-  __device__ void gpurf_initialize_tree_batch(
-      GpuDte::GpuParams<T> *params);
+  __device__ void gpurf_initialize_tree_batch(GpuDte::GpuParams<T> *params);
   __device__ void gpurf_find_split(GpuDte::GpuParams<T> *params);
   __device__ void gpurf_perform_split(GpuDte::GpuParams<T> *params);
   __device__ void gpurf_predict(GpuDte::GpuParams<T> *params);
@@ -79,21 +81,20 @@ class GpuRf : public lib_algorithms::MlAlgorithm<T> {
   __device__ void gpurf_feature_importance(GpuDte::GpuParams<T> *params);
 
   __device__ void radix_sort_on_attribute(
-      GpuDte::GpuParams<T> *params,
-      GpuDte::gpuDTE_NodeHeader_Train<T> &node,
+      GpuDte::GpuParams<T> *params, GpuDte::gpuDTE_NodeHeader_Train<T> &node,
       GpuDte::gpuDTE_TmpNodeValues<T> &tmp_node,
       unsigned int s_histograms[1024], unsigned int s_offsets[256]);
 
-  __device__ T eval_numeric_attribute(
-      GpuDte::GpuParams<T> *params,
-      GpuDte::gpuDTE_NodeHeader_Train<T> &node,
-      GpuDte::gpuDTE_TmpNodeValues<T> &tmp_node, T *curr_dist,
-      int att_type, unsigned int *s_histograms, unsigned int *s_offsets);
+  __device__ T eval_numeric_attribute(GpuDte::GpuParams<T> *params,
+                                      GpuDte::gpuDTE_NodeHeader_Train<T> &node,
+                                      GpuDte::gpuDTE_TmpNodeValues<T> &tmp_node,
+                                      T *curr_dist, int att_type,
+                                      unsigned int *s_histograms,
+                                      unsigned int *s_offsets);
 
-  __device__ T
-  variance_calculation(GpuDte::GpuParams<T> *params,
-                       GpuDte::gpuDTE_NodeHeader_Train<T> &node,
-                       GpuDte::gpuDTE_TmpNodeValues<T> &tmp_node,
-                       T *curr_dist, T *s_histograms);
+  __device__ T variance_calculation(GpuDte::GpuParams<T> *params,
+                                    GpuDte::gpuDTE_NodeHeader_Train<T> &node,
+                                    GpuDte::gpuDTE_TmpNodeValues<T> &tmp_node,
+                                    T *curr_dist, T *s_histograms);
 };
 }

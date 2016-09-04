@@ -354,14 +354,21 @@ sp<lib_data::MlResultData<T>> GpuRf<T>::Predict(
 
 template <typename T>
 sp<lib_models::MlModel> GpuRf<T>::AggregateModels(
-    col_array<sp<lib_models::MlModel>>) {
-  return sp<lib_models::MlModel>();
+    col_array<sp<lib_models::MlModel>> models) {
+  return models[0];
+}
+
+template <typename T>
+col_array<sp<lib_models::MlModel>> GpuRf<T>::SplitModel(
+    sp<lib_models::MlModel> model, const int parts) {
+  col_array<sp<lib_models::MlModel>> models;
+  return models;
 }
 
 template <typename T>
 sp<lib_data::MlResultData<T>> GpuRf<T>::AggregateResults(
     col_array<sp<lib_data::MlResultData<T>>> results) {
-  return sp<lib_data::MlResultData<T>>();
+  return results[0];
 }
 
 template <typename T>
@@ -440,13 +447,13 @@ void GpuRf<T>::AllocateFit(sp<lib_algorithms::MlAlgorithmParams> params,
       &gpu_params->indices_inbag,
       sizeof(bool) * nr_samples * nr_total_trees_per_iteration);
 
-  std::memset(&dataset_info_, 0, sizeof(dataset_info_));
+  memset(&dataset_info_, 0, sizeof(dataset_info_));
   dataset_info_.nr_attributes = nr_features;
   dataset_info_.nr_instances = nr_samples;
   dataset_info_.nr_target_values = nr_targets;
   dataset_info_.data_type = params->Get<int>(EnsemblesLib::kAlgoType);
 
-  std::memset(&static_info_, 0, sizeof(static_info_));
+  memset(&static_info_, 0, sizeof(static_info_));
   static_info_.loaded_trees = nr_total_trees_per_iteration;
   static_info_.total_trees = nr_total_trees;
   static_info_.max_node_size = params->Get<int>(EnsemblesLib::kMinNodeSize);
@@ -459,7 +466,7 @@ void GpuRf<T>::AllocateFit(sp<lib_algorithms::MlAlgorithmParams> params,
   static_info_.balanced_sampling =
       params->Get<bool>(EnsemblesLib::kEasyEnsemble);
 
-  std::memset(&iteration_info_, 0, sizeof(iteration_info_));
+  memset(&iteration_info_, 0, sizeof(iteration_info_));
   iteration_info_.read_buffer_id = iteration_info_.write_buffer_id = 0;
   iteration_info_.tick_tock = true;
 
@@ -519,13 +526,13 @@ void GpuRf<T>::AllocatePredict(sp<lib_algorithms::MlAlgorithmParams> params,
   for (int i = 0; i < pred_init.size(); ++i)
     gpu_params->predictions[i] = pred_init[i];
 
-  std::memset(&dataset_info_, 0, sizeof(dataset_info_));
+  memset(&dataset_info_, 0, sizeof(dataset_info_));
   dataset_info_.nr_attributes = nr_features;
   dataset_info_.nr_instances = nr_samples;
   dataset_info_.nr_target_values = nr_targets;
   dataset_info_.data_type = model_type;
 
-  std::memset(&static_info_, 0, sizeof(static_info_));
+  memset(&static_info_, 0, sizeof(static_info_));
   static_info_.loaded_trees = nr_trees;
   static_info_.total_trees = nr_trees;
   static_info_.max_node_size = params->Get<int>(EnsemblesLib::kMinNodeSize);
@@ -537,7 +544,7 @@ void GpuRf<T>::AllocatePredict(sp<lib_algorithms::MlAlgorithmParams> params,
   static_info_.balanced_sampling =
       params->Get<bool>(EnsemblesLib::kEasyEnsemble);
 
-  std::memset(&iteration_info_, 0, sizeof(iteration_info_));
+  memset(&iteration_info_, 0, sizeof(iteration_info_));
   iteration_info_.read_buffer_id = 0;
   iteration_info_.tree_offset = 0;
 
@@ -642,8 +649,9 @@ __device__ void GpuRf<T>::gpurf_initialize_tree_batch(
                           ? params->dataset_info->nr_instances - 1
                           : params->target_starts[i + 1] - 1;
 
-      for (int ii = threadIdx.x; ii < params->dataset_info->nr_instances /
-                                          params->dataset_info->nr_target_values;
+      for (int ii = threadIdx.x;
+           ii < params->dataset_info->nr_instances /
+                    params->dataset_info->nr_target_values;
            ii += blockDim.x) {
         localCursor = GpuDte::AtomicAdd(&s_indexCursor, 1);
         if (targetEnd - targetStart > 0)
@@ -784,10 +792,9 @@ __device__ void GpuRf<T>::gpurf_find_split(GpuDte::GpuParams<T>* params) {
                    i] = s_dynamic_shared[i];
             break;
           case type_regression_:
-            params
-                ->probability_tmp_buffer[blockIdx.x *
-                                         params->dataset_info->nr_target_values *
-                                         max_nominal_] = s_dynamic_shared[2];
+            params->probability_tmp_buffer
+                [blockIdx.x * params->dataset_info->nr_target_values *
+                 max_nominal_] = s_dynamic_shared[2];
             params->probability_tmp_buffer
                 [blockIdx.x * params->dataset_info->nr_target_values *
                      max_nominal_ +
@@ -1002,8 +1009,8 @@ __device__ void GpuRf<T>::radix_sort_on_attribute(
   if (threadIdx.x == 0) s_nrNegativeValues = 0;
 
   unsigned int* input =
-      (unsigned int*)&params
-          ->dataset[tmp_node.tmp_attribute * params->dataset_info->nr_instances];
+      (unsigned int*)&params->dataset[tmp_node.tmp_attribute *
+                                      params->dataset_info->nr_instances];
   unsigned int* indices =
       (unsigned int*)&params
           ->indices_buffer[params->iteration_info->tick_tock ? 0 : 1]
@@ -1190,8 +1197,8 @@ __device__ T GpuRf<T>::eval_numeric_attribute(
         curr_dist[i] + curr_dist[i + params->dataset_info->nr_target_values];
 
   s_offsets[threadIdx.x] = 0;
-  T prior = GpuDte::entropy_over_columns((T*)curr_dist, att_type,
-                                         params->dataset_info->nr_target_values);
+  T prior = GpuDte::entropy_over_columns(
+      (T*)curr_dist, att_type, params->dataset_info->nr_target_values);
 
   __syncthreads();
 

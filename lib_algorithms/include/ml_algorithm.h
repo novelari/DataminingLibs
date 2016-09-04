@@ -43,8 +43,10 @@ class DLLExport MlAlgorithm {
 
   virtual sp<lib_models::MlModel> AggregateModels(
       col_array<sp<lib_models::MlModel>> models) = 0;
+  virtual col_array<sp<lib_models::MlModel>> SplitModel(
+      sp<lib_models::MlModel> model, const int parts) = 0;
   virtual sp<lib_data::MlResultData<T>> AggregateResults(
-	  col_array<sp<lib_data::MlResultData<T>>> results) = 0;
+      col_array<sp<lib_data::MlResultData<T>>> results) = 0;
   virtual col_array<sp<MlAlgorithmParams>> SplitParameterPack(
       sp<MlAlgorithmParams> params, const int parts) = 0;
 };
