@@ -48,18 +48,18 @@ TEST(lib_ensembles, gpurf_fit) {
   auto params = ensembles_face.CreateGpuRfParamPack();
   params->Set(EnsemblesLib::kNrTrees, 100);
   params->Set(EnsemblesLib::kAlgoType, AlgorithmsLib::kClassification);
-  model = gpurf->Fit(data, params);
+  EXPECT_NO_THROW(model = gpurf->Fit(data, params););
 }
 
 TEST(lib_ensembles, gpurf_predict) {
   //auto data = parser_face.ParseData<float>(lib_parsing::ParsingInterface::kCsv,
     //                                       raw_data_predict);
   auto data = parser_face.ParseFile<float>(lib_parsing::ParsingInterface::kCsv,
-	  "../../runnable_test/spambase.csv");
+                                           "../../runnable_test/spambase.csv");
   auto params = ensembles_face.CreateGpuRfParamPack();
   params->Set(EnsemblesLib::kNrTrees, 100);
-  auto results = gpurf->Predict(data, model, params);
-  auto acc = results->GetAccuracy(data->GetTargets());
-  auto tmp = 0;
+  float acc = 0;
+  EXPECT_NO_THROW(auto results = gpurf->Predict(data, model, params);
+                  acc = results->GetAccuracy(data->GetTargets()););
 }
 }
