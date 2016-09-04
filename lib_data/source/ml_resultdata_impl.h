@@ -10,6 +10,7 @@ class MlResultDataImpl : public MlResultData<T> {
   void AddSingleValue(string name, T value) override;
   void AddMultipleValue(string name, col_array<T> vals) override;
   void AddPredictions(col_array<col_array<T>> predictions) override;
+  T GetAccuracy(const col_array<T> &targets) override;
 
   T GetSingleValue(string name) override;
   col_array<T>& GetMultipleValue(string name) override;

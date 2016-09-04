@@ -18,6 +18,24 @@ template <typename T>
 void MlResultDataImpl<T>::AddPredictions(col_array<col_array<T>> predictions) {
   predictions_ = std::move(predictions);
 }
+
+template <typename T>
+T MlResultDataImpl<T>::GetAccuracy(const col_array<T> &targets) {
+  T acc = 0;
+  for (int i = 0; i < targets.size(); ++i) {
+    T high = 0;
+    T target = 0;
+    for (int ii = 0; ii < predictions_[i].size(); ++ii) {
+      if (predictions_[i][ii] > high) {
+        high = predictions_[i][ii];
+        target = T(ii);
+      }
+    }
+    if (std::abs(target - targets[i]) < 0.01) acc += 1;
+  }
+  return acc / targets.size();
+}
+
 template <typename T>
 inline T MlResultDataImpl<T>::GetSingleValue(string name) {
   return single_val_[name];

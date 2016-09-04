@@ -4,5 +4,6 @@
 
 namespace lib_gpu {
 bool GpuDeviceOpenCl::SupportedDevice() { return false; }
-void GpuDeviceOpenCl::SynchronizeDevice(int dev_id) {}
+void GpuDeviceOpenCl::SynchronizeDevice() {}
+void GpuDeviceOpenCl::SetDeviceForThread(int dev_id) {}
 }

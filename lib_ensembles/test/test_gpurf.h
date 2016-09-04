@@ -39,23 +39,27 @@ auto &ensembles_face = EnsemblesLib::GetInstance();
 sp<lib_models::MlModel> model;
 auto gpurf = ensembles_face.CreateGpuRfAlgorithm<float>();
 
-TEST(lib_algorithms, gpurf_fit) {
-  auto data = parser_face.ParseData<float>(lib_parsing::ParsingInterface::kCsv,
-                                           raw_data_fit);
+TEST(lib_ensembles, gpurf_fit) {
+  //auto data = parser_face.ParseData<float>(lib_parsing::ParsingInterface::kCsv,
+    //                                       raw_data_fit);
 
-  /*auto data = parser_face.ParseFile<float>(lib_parsing::ParsingInterface::kCsv,
-	  "../../runnable_test/spambase.csv");*/
+  auto data = parser_face.ParseFile<float>(lib_parsing::ParsingInterface::kCsv,
+	  "../../runnable_test/spambase.csv");
   auto params = ensembles_face.CreateGpuRfParamPack();
   params->Set(EnsemblesLib::kNrTrees, 100);
   params->Set(EnsemblesLib::kAlgoType, AlgorithmsLib::kClassification);
   model = gpurf->Fit(data, params);
 }
 
-TEST(lib_algorithms, gpurf_predict) {
-  auto data = parser_face.ParseData<float>(lib_parsing::ParsingInterface::kCsv,
-                                           raw_data_predict);
+TEST(lib_ensembles, gpurf_predict) {
+  //auto data = parser_face.ParseData<float>(lib_parsing::ParsingInterface::kCsv,
+    //                                       raw_data_predict);
+  auto data = parser_face.ParseFile<float>(lib_parsing::ParsingInterface::kCsv,
+	  "../../runnable_test/spambase.csv");
   auto params = ensembles_face.CreateGpuRfParamPack();
   params->Set(EnsemblesLib::kNrTrees, 100);
   auto results = gpurf->Predict(data, model, params);
+  auto acc = results->GetAccuracy(data->GetTargets());
+  auto tmp = 0;
 }
 }

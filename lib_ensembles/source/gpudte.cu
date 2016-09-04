@@ -16,7 +16,7 @@ __device__ T GpuDte::lnFunc(T num) {
 template <typename T>
 __device__ T GpuDte::entropy_conditioned_on_rows(T* matrix, int att_type,
                                                  int nr_targets) {
-  int x = (att_type > max_nominal_) ? 2 : 0;
+  int x = (att_type > max_nominal_) ? 2 : att_type;
   int y = nr_targets;
 
   T returnValue = 0, sumForRow, total = 0;
@@ -366,6 +366,13 @@ template __device__ float GpuDte::entropy_conditioned_on_rows(float* matrix,
 template __device__ double GpuDte::entropy_conditioned_on_rows(double* matrix,
                                                                int att_type,
                                                                int nr_targets);
+
+template __device__ float GpuDte::entropy_over_columns(float* matrix,
+                                                       int att_type,
+                                                       int nr_targets);
+template __device__ double GpuDte::entropy_over_columns(double* matrix,
+                                                        int att_type,
+                                                        int nr_targets);
 
 template __device__ float GpuDte::get_data_point(int attribute, int instance,
                                                  int nr_instances,

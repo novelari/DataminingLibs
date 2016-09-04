@@ -6,7 +6,8 @@ class DLLExport GpuDevice {
   virtual ~GpuDevice() {}
 
   virtual bool SupportedDevice() = 0;
-  virtual void SynchronizeDevice(int dev_id) = 0;
+  virtual void SynchronizeDevice() = 0;
+  virtual void SetDeviceForThread(int dev_id) = 0;
 
   int GetDeviceCount();
 

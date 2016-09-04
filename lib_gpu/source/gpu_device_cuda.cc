@@ -32,10 +32,15 @@ bool GpuDeviceCuda::SupportedDevice() {
 
   return true;
 }
-void GpuDeviceCuda::SynchronizeDevice(int dev_id) {
-  auto &core_interface = lib_core::CoreInterface::GetInstance();
-  cudaError_t error = cudaDeviceSynchronize();
-  if (error != cudaSuccess)
-    core_interface.ThrowException("Cuda error found: " + std::to_string(error));
+void GpuDeviceCuda::SynchronizeDevice() {
+  CheckCudaError(cudaDeviceSynchronize());
+}
+void GpuDeviceCuda::SetDeviceForThread(int dev_id) {
+  cudaError_t error = cudaSetDevice(dev_id);
+}
+void GpuDeviceCuda::CheckCudaError(cudaError_t error) {
+	auto &core_interface = lib_core::CoreInterface::GetInstance();
+	if (error != cudaSuccess)
+		core_interface.ThrowException("Cuda error found: " + std::to_string(error));
 }
 }

@@ -7,7 +7,8 @@ namespace lib_gpu {
 class GpuDeviceCuda : public GpuDevice {
  public:
   bool SupportedDevice() override;
-  void SynchronizeDevice(int dev_id) override;
+  void SynchronizeDevice() override;
+  void SetDeviceForThread(int dev_id) override;
 
   template <typename T>
   static void DeallocateMemory(T **dev_ptr) {
@@ -33,5 +34,8 @@ class GpuDeviceCuda : public GpuDevice {
       lib_core::CoreInterface::GetInstance().ThrowException(
           "Cuda allocation failed.");
   }
+
+private:
+	void CheckCudaError(cudaError_t error);
 };
 }

@@ -11,6 +11,7 @@ set(dir_list
 	../lib_gpu/include
 	../lib_core/include
 	../lib_parsing/include
+	../lib_ensembles/include
 )
 
 set(cpp_files
