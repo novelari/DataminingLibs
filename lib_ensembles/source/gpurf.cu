@@ -15,9 +15,35 @@
 #include "../../source_shared/include/lock_free_list.hpp"
 
 namespace lib_ensembles {
+__constant__ GpuDte::gpuDTE_StaticInfo static_info;
+__constant__ GpuDte::gpuDTE_DatasetInfo dataset_info;
+__constant__ GpuDte::gpuDTE_IterationInfo iteration_info;
+
+__host__ void cpy_iteration_info(GpuDte::gpuDTE_IterationInfo* info) {
+  cudaError_t error = cudaMemcpyToSymbol(lib_ensembles::iteration_info, info,
+                                         sizeof(GpuDte::gpuDTE_IterationInfo),
+                                         0, cudaMemcpyHostToDevice);
+  if (error != cudaSuccess) CoreLib::GetInstance().ThrowException("Cuda error");
+}
+
+__host__ void cpy_data_static_info(GpuDte::gpuDTE_DatasetInfo* data,
+                                   GpuDte::gpuDTE_StaticInfo* info) {
+  cudaError_t error = cudaMemcpyToSymbol(lib_ensembles::dataset_info, data,
+                                         sizeof(GpuDte::gpuDTE_DatasetInfo), 0,
+                                         cudaMemcpyHostToDevice);
+  if (error != cudaSuccess) CoreLib::GetInstance().ThrowException("Cuda error");
+  error = cudaMemcpyToSymbol(lib_ensembles::static_info, info,
+                             sizeof(GpuDte::gpuDTE_StaticInfo), 0,
+                             cudaMemcpyHostToDevice);
+  if (error != cudaSuccess) CoreLib::GetInstance().ThrowException("Cuda error");
+}
+
 template <typename T>
 __global__ void host_kernel(GpuRf<T>* gpu_algo, GpuDte::GpuParams<T>* params,
                             GpuRfStatic::GpuRfKernelId type) {
+  params->static_info = &static_info;
+  params->dataset_info = &dataset_info;
+  params->iteration_info = &iteration_info;
   switch (type) {
     case GpuRfStatic::kSetupKernel:
       gpu_algo->gpurf_setup_kernel(params);
@@ -77,41 +103,41 @@ sp<lib_models::MlModel> GpuRf<T>::Fit(
   col_array<GpuDte::gpuDTE_NodeHeader_Classify<T>> tree_nodes;
   col_array<T> tree_probabilities;
 
-  //auto barrier = CoreLib::GetInstance().CreateBarrier(2);
-  //bool run_rec_func = true;
+  // auto barrier = CoreLib::GetInstance().CreateBarrier(2);
+  // bool run_rec_func = true;
   sutil::LockFreeList<std::pair<int, int>> job_list;
   col_map<int, int> track_map;
   int prob_id = 0;
   auto data_rec_func = [&]() {
-    //device.SetDeviceForThread(params->Get<int>(EnsemblesLib::kDevId));
-    //barrier->Wait();
-    //do {
-      auto pair = job_list.pop_front();
-      for (int i = 0; i < pair->first; ++i) {
-        auto& gpu_node = gpu_params->node_buffers[pair->second][i];
-        auto itr = track_map.find(gpu_node.parent_id);
-        if (gpu_node.parent_id >= 0 && itr != track_map.end()) {
-          tree_nodes[itr->second].child_start = int(tree_nodes.size());
-          track_map.erase(itr->first);
-        }
-
-        tmp_node.child_count = gpu_node.attribute == -1 ? 0 : 2;
-        tmp_node.attribute = gpu_node.attribute;
-        tmp_node.split_point = gpu_node.split_point;
-
-        tmp_node.probability_start = int(tree_probabilities.size());
-        for (int ii = 0; ii < nr_targets; ++ii)
-          tree_probabilities.emplace_back(
-              gpu_params->probability_buffers[prob_id][i * nr_targets + ii]);
-
-        track_map[gpu_node.trackinid] = int(tree_nodes.size());
-        tree_nodes.emplace_back(tmp_node);
+    // device.SetDeviceForThread(params->Get<int>(EnsemblesLib::kDevId));
+    // barrier->Wait();
+    // do {
+    auto pair = job_list.pop_front();
+    for (int i = 0; i < pair->first; ++i) {
+      auto& gpu_node = gpu_params->node_buffers[pair->second][i];
+      auto itr = track_map.find(gpu_node.parent_id);
+      if (gpu_node.parent_id >= 0 && itr != track_map.end()) {
+        tree_nodes[itr->second].child_start = int(tree_nodes.size());
+        track_map.erase(itr->first);
       }
-      prob_id = prob_id == 0 ? 1 : 0;
-      //barrier->Wait();
+
+      tmp_node.child_count = gpu_node.attribute == -1 ? 0 : 2;
+      tmp_node.attribute = gpu_node.attribute;
+      tmp_node.split_point = gpu_node.split_point;
+
+      tmp_node.probability_start = int(tree_probabilities.size());
+      for (int ii = 0; ii < nr_targets; ++ii)
+        tree_probabilities.emplace_back(
+            gpu_params->probability_buffers[prob_id][i * nr_targets + ii]);
+
+      track_map[gpu_node.trackinid] = int(tree_nodes.size());
+      tree_nodes.emplace_back(tmp_node);
+    }
+    prob_id = prob_id == 0 ? 1 : 0;
+    // barrier->Wait();
     //} while (run_rec_func);
   };
-  //sp<std::thread> data_rec_thread =
+  // sp<std::thread> data_rec_thread =
   //    std::make_shared<std::thread>(data_rec_func);
 
   AllocateFit(params, gpu_params, data);
@@ -121,12 +147,12 @@ sp<lib_models::MlModel> GpuRf<T>::Fit(
   int nodes_pulled = 0;
   int stream_buffer = 2;
   while (nr_total_trees > 0) {
-	stream_buffer = 2;
-    gpu_params->iteration_info->depth = 0;
-    gpu_params->iteration_info->read_buffer_id = 0;
-    gpu_params->iteration_info->write_buffer_id = 1;
-    gpu_params->iteration_info->prob_buffer_id = 0;	
-    gpu_params->iteration_info->tick_tock = true;
+    stream_buffer = 2;
+    iteration_info_.depth = 0;
+    iteration_info_.read_buffer_id = 0;
+    iteration_info_.write_buffer_id = 1;
+    iteration_info_.prob_buffer_id = 0;
+    iteration_info_.tick_tock = true;
 
     int trees_launched = nr_total_trees > nr_nodes_per_batch
                              ? nr_nodes_per_batch
@@ -135,15 +161,17 @@ sp<lib_models::MlModel> GpuRf<T>::Fit(
     int nodes_left = trees_launched;
     int layer_id = 0;
     col_array<int> buffer_counts(3, 0);
-    buffer_counts[gpu_params->iteration_info->read_buffer_id] = nodes_left;
+    buffer_counts[iteration_info_.read_buffer_id] = nodes_left;
 
-    gpu_params->iteration_info->threads_launched = nr_nodes_per_batch;
+    iteration_info_.threads_launched = nr_nodes_per_batch;
+    cpy_iteration_info(&iteration_info_);
     device.SynchronizeDevice();
     host_kernel<
         T><<<nr_nodes_per_batch / nr_threads_in_block, nr_threads_in_block>>>(
         this, gpu_params, GpuRfStatic::kSetupKernel);
     device.SynchronizeDevice();
-    gpu_params->iteration_info->threads_launched = trees_launched;
+    iteration_info_.threads_launched = trees_launched;
+    cpy_iteration_info(&iteration_info_);
     device.SynchronizeDevice();
 
     host_kernel<T><<<trees_launched, nr_threads_in_block>>>(
@@ -160,7 +188,8 @@ sp<lib_models::MlModel> GpuRf<T>::Fit(
                                  : nodes_left;
 
         nodes_left -= nodes_launched;
-        gpu_params->iteration_info->threads_launched = nodes_launched;
+        iteration_info_.threads_launched = nodes_launched;
+        cpy_iteration_info(&iteration_info_);
         device.SynchronizeDevice();
 
         host_kernel<T><<<nodes_launched, nr_threads_in_block>>>(
@@ -171,26 +200,25 @@ sp<lib_models::MlModel> GpuRf<T>::Fit(
             this, gpu_params, GpuRfStatic::kPerformSplit);
         device.SynchronizeDevice();
 
-        gpu_params->iteration_info->node_offset += nodes_launched;
-        buffer_counts[gpu_params->iteration_info->write_buffer_id] =
+        iteration_info_.node_offset += nodes_launched;
+        buffer_counts[iteration_info_.write_buffer_id] =
             gpu_params->node_cursors[new_nodes_];
 
         // Swap write buffer
         if (swap_next) {
-          gpu_params->iteration_info->node_offset = 0;
-          SwapBuffers(&gpu_params->iteration_info->read_buffer_id,
-                      &stream_buffer);
+          iteration_info_.node_offset = 0;
+          SwapBuffers(&iteration_info_.read_buffer_id, &stream_buffer);
           swap_next = false;
 
           // Stream partial layer results
-          gpu_params->iteration_info->prob_buffer_id =
-              gpu_params->iteration_info->prob_buffer_id == 0 ? 1 : 0;
+          iteration_info_.prob_buffer_id =
+              iteration_info_.prob_buffer_id == 0 ? 1 : 0;
 
           job_list.push_front(
               std::pair<int, int>(buffer_counts[stream_buffer], stream_buffer));
           buffer_counts[stream_buffer] = 0;
-		  data_rec_func();
-          //barrier->Wait();
+          data_rec_func();
+          // barrier->Wait();
           nodes_left = nodes_pulled;
         } else if (!node_cache[layer_id].empty() &&
                    nodes_left - int(nr_nodes_per_batch / max_nominal_) <= 0) {
@@ -203,19 +231,18 @@ sp<lib_models::MlModel> GpuRf<T>::Fit(
           StreamFromCache(stream_buffer, layer_id, node_cache, buffer_counts,
                           gpu_params->node_buffers[stream_buffer]);
 
-          if (buffer_counts[gpu_params->iteration_info->write_buffer_id] > 0)
-            StreamToCache(gpu_params->iteration_info->write_buffer_id, layer_id,
-                          node_cache, buffer_counts,
-                          gpu_params->node_buffers[gpu_params->iteration_info
-                                                       ->write_buffer_id]);
+          if (buffer_counts[iteration_info_.write_buffer_id] > 0)
+            StreamToCache(
+                iteration_info_.write_buffer_id, layer_id, node_cache,
+                buffer_counts,
+                gpu_params->node_buffers[iteration_info_.write_buffer_id]);
 
           swap_next = true;
         }
 
         if (!swap_next) {
           // Stream nodes to the cache
-          SwapBuffers(&gpu_params->iteration_info->write_buffer_id,
-                      &stream_buffer);
+          SwapBuffers(&iteration_info_.write_buffer_id, &stream_buffer);
 
           if (buffer_counts[stream_buffer] > 0)
             StreamToCache(stream_buffer, layer_id, node_cache, buffer_counts,
@@ -228,15 +255,15 @@ sp<lib_models::MlModel> GpuRf<T>::Fit(
       } while (nodes_left > 0);
 
       // Stream the last layer results
-      gpu_params->iteration_info->prob_buffer_id =
-          gpu_params->iteration_info->prob_buffer_id == 0 ? 1 : 0;
+      iteration_info_.prob_buffer_id =
+          iteration_info_.prob_buffer_id == 0 ? 1 : 0;
 
-      job_list.push_front(std::pair<int, int>(
-          buffer_counts[gpu_params->iteration_info->read_buffer_id],
-          gpu_params->iteration_info->read_buffer_id));
-      buffer_counts[gpu_params->iteration_info->read_buffer_id] = 0;
-	  data_rec_func();
-      //barrier->Wait();
+      job_list.push_front(
+          std::pair<int, int>(buffer_counts[iteration_info_.read_buffer_id],
+                              iteration_info_.read_buffer_id));
+      buffer_counts[iteration_info_.read_buffer_id] = 0;
+      data_rec_func();
+      // barrier->Wait();
 
       // Prepare next layer
       layer_id = layer_id == 0 ? 1 : 0;
@@ -244,26 +271,23 @@ sp<lib_models::MlModel> GpuRf<T>::Fit(
         nodes_left = nr_nodes_per_batch < node_cache[layer_id].size()
                          ? nr_nodes_per_batch
                          : int(node_cache[layer_id].size());
-        buffer_counts[gpu_params->iteration_info->read_buffer_id] = nodes_left;
+        buffer_counts[iteration_info_.read_buffer_id] = nodes_left;
         StreamFromCache(
-            gpu_params->iteration_info->read_buffer_id, layer_id, node_cache,
-            buffer_counts,
-            gpu_params
-                ->node_buffers[gpu_params->iteration_info->read_buffer_id]);
+            iteration_info_.read_buffer_id, layer_id, node_cache, buffer_counts,
+            gpu_params->node_buffers[iteration_info_.read_buffer_id]);
       }
 
-      ++gpu_params->iteration_info->depth;
-      gpu_params->iteration_info->node_offset = 0;
-      gpu_params->iteration_info->tick_tock =
-          !gpu_params->iteration_info->tick_tock;
+      ++iteration_info_.depth;
+      iteration_info_.node_offset = 0;
+      iteration_info_.tick_tock = !iteration_info_.tick_tock;
     } while (nodes_left > 0);
 
     trees_built += trees_launched;
   }
 
-  //run_rec_func = false;
-  //barrier->Wait();
-  //if (data_rec_thread->joinable()) data_rec_thread->join();
+  // run_rec_func = false;
+  // barrier->Wait();
+  // if (data_rec_thread->joinable()) data_rec_thread->join();
   FreeParams(&gpu_params);
 
   model->Add(ModelsLib::kNodeArray, tree_nodes);
@@ -298,14 +322,14 @@ sp<lib_data::MlResultData<T>> GpuRf<T>::Predict(
       launch_threads = ceil(T(total_threads) / T(block_size)) > max_blocks
                            ? max_blocks * block_size
                            : total_threads;
-      gpu_params->iteration_info->threads_launched = launch_threads;
-
+      iteration_info_.threads_launched = launch_threads;
+      cpy_iteration_info(&iteration_info_);
       device.SynchronizeDevice();
       host_kernel<T><<<launch_threads / block_size, block_size>>>(
           this, gpu_params, GpuRfStatic::kPredict);
       device.SynchronizeDevice();
 
-      gpu_params->iteration_info->tree_offset += launch_threads;
+      iteration_info_.tree_offset += launch_threads;
       total_threads -= launch_threads;
     }
   }
@@ -416,37 +440,31 @@ void GpuRf<T>::AllocateFit(sp<lib_algorithms::MlAlgorithmParams> params,
       &gpu_params->indices_inbag,
       sizeof(bool) * nr_samples * nr_total_trees_per_iteration);
 
-  lib_gpu::GpuDeviceCuda::AllocateManagedMemory(
-      &gpu_params->dataset_info, sizeof(GpuDte::gpuDTE_DatasetInfo));
-  lib_gpu::GpuDeviceCuda::AllocateManagedMemory(
-      &gpu_params->static_info, sizeof(GpuDte::gpuDTE_StaticInfo));
-  lib_gpu::GpuDeviceCuda::AllocateManagedMemory(
-      &gpu_params->iteration_info, sizeof(GpuDte::gpuDTE_IterationInfo));
+  std::memset(&dataset_info_, 0, sizeof(dataset_info_));
+  dataset_info_.nr_attributes = nr_features;
+  dataset_info_.nr_instances = nr_samples;
+  dataset_info_.nr_target_values = nr_targets;
+  dataset_info_.data_type = params->Get<int>(EnsemblesLib::kAlgoType);
 
-  gpu_params->dataset_info->nr_attributes = nr_features;
-  gpu_params->dataset_info->nr_instances = nr_samples;
-  gpu_params->dataset_info->nr_target_values = nr_targets;
-  gpu_params->dataset_info->data_type =
-      params->Get<int>(EnsemblesLib::kAlgoType);
-
-  gpu_params->static_info->loaded_trees = nr_total_trees_per_iteration;
-  gpu_params->static_info->total_trees = nr_total_trees;
-  gpu_params->static_info->max_node_size =
-      params->Get<int>(EnsemblesLib::kMinNodeSize);
-  gpu_params->static_info->max_node_depth =
-      params->Get<int>(EnsemblesLib::kMaxDepth);
-  gpu_params->static_info->node_buffer_size = 1024;
+  std::memset(&static_info_, 0, sizeof(static_info_));
+  static_info_.loaded_trees = nr_total_trees_per_iteration;
+  static_info_.total_trees = nr_total_trees;
+  static_info_.max_node_size = params->Get<int>(EnsemblesLib::kMinNodeSize);
+  static_info_.max_node_depth = params->Get<int>(EnsemblesLib::kMaxDepth);
+  static_info_.node_buffer_size = 1024;
 
   auto k = params->Get<int>(EnsemblesLib::kNrFeatures);
-  gpu_params->static_info->nr_features =
-      k > 0 ? k : int(std::round(log(nr_features))) + 1;
-  gpu_params->static_info->max_class_count = nr_targets;
-  gpu_params->static_info->balanced_sampling =
+  static_info_.nr_features = k > 0 ? k : int(std::round(log(nr_features))) + 1;
+  static_info_.max_class_count = nr_targets;
+  static_info_.balanced_sampling =
       params->Get<bool>(EnsemblesLib::kEasyEnsemble);
 
-  gpu_params->iteration_info->read_buffer_id =
-      gpu_params->iteration_info->write_buffer_id = 0;
-  gpu_params->iteration_info->tick_tock = true;
+  std::memset(&iteration_info_, 0, sizeof(iteration_info_));
+  iteration_info_.read_buffer_id = iteration_info_.write_buffer_id = 0;
+  iteration_info_.tick_tock = true;
+
+  cpy_data_static_info(&dataset_info_, &static_info_);
+  cpy_iteration_info(&iteration_info_);
 
   lib_gpu::GpuDeviceCuda::AllocateManagedMemory(
       &gpu_params->random_states,
@@ -501,27 +519,30 @@ void GpuRf<T>::AllocatePredict(sp<lib_algorithms::MlAlgorithmParams> params,
   for (int i = 0; i < pred_init.size(); ++i)
     gpu_params->predictions[i] = pred_init[i];
 
-  gpu_params->dataset_info->nr_attributes = nr_features;
-  gpu_params->dataset_info->nr_instances = nr_samples;
-  gpu_params->dataset_info->nr_target_values = nr_targets;
-  gpu_params->dataset_info->data_type = model_type;
+  std::memset(&dataset_info_, 0, sizeof(dataset_info_));
+  dataset_info_.nr_attributes = nr_features;
+  dataset_info_.nr_instances = nr_samples;
+  dataset_info_.nr_target_values = nr_targets;
+  dataset_info_.data_type = model_type;
 
-  gpu_params->static_info->loaded_trees = nr_trees;
-  gpu_params->static_info->total_trees = nr_trees;
-  gpu_params->static_info->max_node_size =
-      params->Get<int>(EnsemblesLib::kMinNodeSize);
-  gpu_params->static_info->max_node_depth =
-      params->Get<int>(EnsemblesLib::kMaxDepth);
+  std::memset(&static_info_, 0, sizeof(static_info_));
+  static_info_.loaded_trees = nr_trees;
+  static_info_.total_trees = nr_trees;
+  static_info_.max_node_size = params->Get<int>(EnsemblesLib::kMinNodeSize);
+  static_info_.max_node_depth = params->Get<int>(EnsemblesLib::kMaxDepth);
 
   auto k = params->Get<int>(EnsemblesLib::kNrFeatures);
-  gpu_params->static_info->nr_features =
-      k > 0 ? k : int(std::round(log(nr_features))) + 1;
-  gpu_params->static_info->max_class_count = nr_targets;
-  gpu_params->static_info->balanced_sampling =
+  static_info_.nr_features = k > 0 ? k : int(std::round(log(nr_features))) + 1;
+  static_info_.max_class_count = nr_targets;
+  static_info_.balanced_sampling =
       params->Get<bool>(EnsemblesLib::kEasyEnsemble);
 
-  gpu_params->iteration_info->read_buffer_id = 0;
-  gpu_params->iteration_info->tree_offset = 0;
+  std::memset(&iteration_info_, 0, sizeof(iteration_info_));
+  iteration_info_.read_buffer_id = 0;
+  iteration_info_.tree_offset = 0;
+
+  cpy_data_static_info(&dataset_info_, &static_info_);
+  cpy_iteration_info(&iteration_info_);
 }
 
 template <typename T>
@@ -621,9 +642,8 @@ __device__ void GpuRf<T>::gpurf_initialize_tree_batch(
                           ? params->dataset_info->nr_instances - 1
                           : params->target_starts[i + 1] - 1;
 
-      for (int ii = threadIdx.x;
-           ii < params->dataset_info->nr_instances /
-                    params->dataset_info->nr_target_values;
+      for (int ii = threadIdx.x; ii < params->dataset_info->nr_instances /
+                                          params->dataset_info->nr_target_values;
            ii += blockDim.x) {
         localCursor = GpuDte::AtomicAdd(&s_indexCursor, 1);
         if (targetEnd - targetStart > 0)
@@ -764,9 +784,10 @@ __device__ void GpuRf<T>::gpurf_find_split(GpuDte::GpuParams<T>* params) {
                    i] = s_dynamic_shared[i];
             break;
           case type_regression_:
-            params->probability_tmp_buffer
-                [blockIdx.x * params->dataset_info->nr_target_values *
-                 max_nominal_] = s_dynamic_shared[2];
+            params
+                ->probability_tmp_buffer[blockIdx.x *
+                                         params->dataset_info->nr_target_values *
+                                         max_nominal_] = s_dynamic_shared[2];
             params->probability_tmp_buffer
                 [blockIdx.x * params->dataset_info->nr_target_values *
                      max_nominal_ +
@@ -799,10 +820,11 @@ __device__ void GpuRf<T>::gpurf_perform_split(GpuDte::GpuParams<T>* params) {
   extern __shared__ int s_node_counts[];
 
   GpuDte::gpudte_perform_split(
-      *params->static_info, *params->dataset_info, *params->iteration_info,
-      params->probability_buffers, params->probability_tmp_buffer,
-      params->dataset, params->attribute_type, s_node_counts,
-      params->indices_buffer, params->node_cursors, params->node_buffers);
+      *(params->static_info), *(params->dataset_info),
+      *(params->iteration_info), params->probability_buffers,
+      params->probability_tmp_buffer, params->dataset, params->attribute_type,
+      s_node_counts, params->indices_buffer, params->node_cursors,
+      params->node_buffers);
 }
 
 template <typename T>
@@ -980,8 +1002,8 @@ __device__ void GpuRf<T>::radix_sort_on_attribute(
   if (threadIdx.x == 0) s_nrNegativeValues = 0;
 
   unsigned int* input =
-      (unsigned int*)&params->dataset[tmp_node.tmp_attribute *
-                                      params->dataset_info->nr_instances];
+      (unsigned int*)&params
+          ->dataset[tmp_node.tmp_attribute * params->dataset_info->nr_instances];
   unsigned int* indices =
       (unsigned int*)&params
           ->indices_buffer[params->iteration_info->tick_tock ? 0 : 1]
@@ -1168,8 +1190,8 @@ __device__ T GpuRf<T>::eval_numeric_attribute(
         curr_dist[i] + curr_dist[i + params->dataset_info->nr_target_values];
 
   s_offsets[threadIdx.x] = 0;
-  T prior = GpuDte::entropy_over_columns(
-      (T*)curr_dist, att_type, params->dataset_info->nr_target_values);
+  T prior = GpuDte::entropy_over_columns((T*)curr_dist, att_type,
+                                         params->dataset_info->nr_target_values);
 
   __syncthreads();
 

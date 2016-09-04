@@ -64,6 +64,10 @@ class GpuRf : public lib_algorithms::MlAlgorithm<T> {
       col_array<int> &buffer_counts,
       GpuDte::gpuDTE_NodeHeader_Train<T> *node_headers);
 
+  GpuDte::gpuDTE_StaticInfo static_info_;
+  GpuDte::gpuDTE_DatasetInfo dataset_info_;
+  GpuDte::gpuDTE_IterationInfo iteration_info_;
+
  public:
   __device__ void gpurf_setup_kernel(GpuDte::GpuParams<T> *params);
   __device__ void gpurf_initialize_tree_batch(
