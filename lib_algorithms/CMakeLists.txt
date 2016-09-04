@@ -29,7 +29,6 @@ set(cpp_files
 
 	./source/ml_algorithm_params_impl.cc
 	./source/algorithms_interface.cc
-	./source/ml_algorithm.cc
 	../source_shared/precomp.cc
 	./source/gpu_algorithm.cc
 )
@@ -49,7 +48,6 @@ source_group(interface FILES
 	./include/algorithms_interface.h
 
 	./source/algorithms_interface.cc
-	./source/ml_algorithm.cc
 )
 
 source_group(test FILES

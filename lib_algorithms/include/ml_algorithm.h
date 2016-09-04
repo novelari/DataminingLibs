@@ -15,8 +15,8 @@ class MlAlgorithmParams;
 template <typename T>
 class DLLExport MlAlgorithm {
  public:
-  MlAlgorithm();
-  virtual ~MlAlgorithm();
+  MlAlgorithm() {}
+  virtual ~MlAlgorithm() {}
 
   /**
   *	\brief
