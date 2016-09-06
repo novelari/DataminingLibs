@@ -10,23 +10,36 @@ GpuInterface& GpuInterface::GetInstance() {
   return instance;
 }
 
-GpuDevice& GpuInterface::GetGpuDevice(int dev_id, PreferredApi pref_api) {
+sp<GpuDevice> GpuInterface::CreateGpuDevice(int dev_id, PreferredApi pref_api) {
+  sp<GpuDevice> res;
   switch (pref_api) {
     case kCuda:
-      if (cuda_device_->SupportedDevice()) return *cuda_device_;
+      if (!cuda_support_) {
+        res = std::make_shared<GpuDeviceOpenCl>(dev_id);
+        break;
+      }
+      if (init_cuda_) {
+        init_cuda_ = false;
+        CUresult error = cuInit(0);
+        if (error != CUDA_SUCCESS) {
+          res = std::make_shared<GpuDeviceOpenCl>(dev_id);
+          cuda_support_ = false;
+          break;
+        }
+      }
+      res = std::make_shared<GpuDeviceCuda>(dev_id);
+      break;
     case kOpenCl:
-      if (opencl_device_->SupportedDevice()) return *opencl_device_;
+      res = std::make_shared<GpuDeviceOpenCl>(dev_id);
+      break;
     default:
-      return *opencl_device_;
+      res = std::make_shared<GpuDeviceOpenCl>(dev_id);
+      break;
   }
+  return res;
 }
 
-GpuInterface::GpuInterface()
-    : cuda_device_(new GpuDeviceCuda()),
-      opencl_device_(new GpuDeviceOpenCl()) {}
+GpuInterface::GpuInterface() : init_cuda_(true), cuda_support_(true) {}
 
-GpuInterface::~GpuInterface() {
-  delete cuda_device_;
-  delete opencl_device_;
-}
+GpuInterface::~GpuInterface() {}
 }

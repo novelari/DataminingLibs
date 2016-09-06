@@ -7,13 +7,12 @@ class DLLExport GpuInterface {
   static GpuInterface& GetInstance();
 
   enum PreferredApi { kCuda, kOpenCl };
-  GpuDevice& GetGpuDevice(int dev_id = 0, PreferredApi pref_api = kCuda);
+  sp<GpuDevice> CreateGpuDevice(int dev_id = 0, PreferredApi pref_api = kCuda);
 
  private:
-  GpuDevice* cuda_device_;
-  GpuDevice* opencl_device_;
-
   GpuInterface();
   ~GpuInterface();
+  bool init_cuda_;
+  bool cuda_support_;
 };
 }

@@ -15,5 +15,6 @@ class DLLExport MlResultData {
   virtual col_array<T>& GetMultipleValue(string name) = 0;
 
   virtual string ToString() = 0;
+  virtual MlResultData<T>& operator+=(const MlResultData<T>& rhs) = 0;
 };
 }

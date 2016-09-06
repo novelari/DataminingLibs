@@ -16,7 +16,7 @@ class MlResultDataImpl : public MlResultData<T> {
   col_array<T>& GetMultipleValue(string name) override;
 
   string ToString() override;
-
+  MlResultData<T>& operator+=(const MlResultData<T>& rhs) override;
  private:
   col_array<col_array<T>> predictions_;
   col_map<string, T> single_val_;

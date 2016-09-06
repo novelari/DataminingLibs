@@ -3,6 +3,10 @@
 
 #include "../../lib_algorithms/include/ml_algorithm.h"
 
+namespace lib_gpu {
+class GpuDevice;
+}
+
 namespace lib_ensembles {
 class GpuRfStatic {
  public:
@@ -44,32 +48,56 @@ class GpuRf : public lib_algorithms::MlAlgorithm<T> {
       sp<lib_algorithms::MlAlgorithmParams> params, const int parts) override;
 
  private:
-  void AllocateFit(sp<lib_algorithms::MlAlgorithmParams> params,
+  class HostAllocFit {
+   public:
+    HostAllocFit(sp<lib_gpu::GpuDevice> dev, size_t targets);
+    ~HostAllocFit();
+
+    T *probability_cpy;
+    GpuDte::gpuDTE_NodeHeader_Train<T> *node_cpy;
+    int *node_cursor_cpy;
+
+    sp<lib_gpu::GpuDevice> dev_;
+  };
+  class HostAllocPredict {
+   public:
+    HostAllocPredict(sp<lib_gpu::GpuDevice> dev, size_t samples,
+                     size_t targets);
+    ~HostAllocPredict();
+
+    T *predictions_cpy;
+
+    sp<lib_gpu::GpuDevice> dev_;
+  };
+
+  void AllocateFit(sp<lib_gpu::GpuDevice> dev,
+                   sp<lib_algorithms::MlAlgorithmParams> params,
                    GpuDte::GpuParams<T> *gpu_params,
-                   sp<lib_data::MlDataFrame<T>> data);
-  void AllocatePredict(sp<lib_algorithms::MlAlgorithmParams> params,
+                   sp<lib_data::MlDataFrame<T>> data,
+                   GpuDte::gpuDTE_StaticInfo &static_info,
+                   GpuDte::gpuDTE_DatasetInfo &dataset_info,
+                   GpuDte::gpuDTE_IterationInfo &iteration_info);
+  void AllocatePredict(sp<lib_gpu::GpuDevice> dev,
+                       sp<lib_algorithms::MlAlgorithmParams> params,
                        GpuDte::GpuParams<T> *gpu_params,
                        sp<lib_data::MlDataFrame<T>> data,
-                       sp<lib_models::MlModel> model);
-
-  void FreeParams(GpuDte::GpuParams<T> **dev_ptr);
-  GpuDte::GpuParams<T> *CreateParams();
+                       sp<lib_models::MlModel> model,
+                       GpuDte::gpuDTE_StaticInfo &static_info,
+                       GpuDte::gpuDTE_DatasetInfo &dataset_info,
+                       GpuDte::gpuDTE_IterationInfo &iteration_info);
 
   void SwapBuffers(int *lhs, int *rhs);
   void StreamToCache(
-      int src_id, int layer_id,
+      sp<lib_gpu::GpuDevice> dev, HostAllocFit &host_alloc, int src_id,
+      int layer_id,
       col_array<col_array<GpuDte::gpuDTE_NodeHeader_Train<T>>> &node_cache,
       col_array<int> &buffer_counts,
       GpuDte::gpuDTE_NodeHeader_Train<T> *node_headers);
   void StreamFromCache(
-      int dst_id, int layer_id,
+      sp<lib_gpu::GpuDevice> dev, HostAllocFit& host_alloc, int dst_id, int layer_id,
       col_array<col_array<GpuDte::gpuDTE_NodeHeader_Train<T>>> &node_cache,
       col_array<int> &buffer_counts,
       GpuDte::gpuDTE_NodeHeader_Train<T> *node_headers);
-
-  GpuDte::gpuDTE_StaticInfo static_info_;
-  GpuDte::gpuDTE_DatasetInfo dataset_info_;
-  GpuDte::gpuDTE_IterationInfo iteration_info_;
 
  public:
   __device__ void gpurf_setup_kernel(GpuDte::GpuParams<T> *params);

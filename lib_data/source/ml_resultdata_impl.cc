@@ -16,7 +16,8 @@ inline void MlResultDataImpl<T>::AddMultipleValue(string name,
 }
 template <typename T>
 void MlResultDataImpl<T>::AddPredictions(col_array<col_array<T>> predictions) {
-  predictions_ = std::move(predictions);
+  if (predictions_.empty())
+    predictions_ = std::move(predictions);
 }
 
 template <typename T>
@@ -31,7 +32,7 @@ T MlResultDataImpl<T>::GetAccuracy(const col_array<T> &targets) {
         target = T(ii);
       }
     }
-    if (std::abs(target - targets[i]) < 0.01) acc += 1;
+    if (std::abs(target - targets[i]) < 0.001) acc += 1;
   }
   return acc / targets.size();
 }
@@ -56,6 +57,17 @@ string MlResultDataImpl<T>::ToString() {
     result += "]\r\n";
   }
   return result;
+}
+
+template <typename T>
+MlResultData<T> &MlResultDataImpl<T>::operator+=(const MlResultData<T> &rhs) {
+  auto rhs_ref = static_cast<const MlResultDataImpl<T> *>(&rhs);
+  for (int i = 0; i < predictions_.size(); ++i) {
+    for (int ii = 0; ii < predictions_[i].size(); ++ii) {
+      predictions_[i][ii] += rhs_ref->predictions_[i][ii];
+    }
+  }
+  return *this;
 }
 
 template MlResultDataImpl<float>::MlResultDataImpl();

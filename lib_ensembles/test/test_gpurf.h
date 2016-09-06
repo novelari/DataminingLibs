@@ -58,16 +58,15 @@ auto data_csv_flt = parser_face.ParseFile<float>(
 
 TEST(lib_ensembles, gpurf_fit_double_rawdata) {
   auto params = ensembles_face.CreateGpuRfParamPack();
-  params->Set(EnsemblesLib::kNrTrees, 100);
+  params->Set(EnsemblesLib::kNrTrees, 200);
   params->Set(EnsemblesLib::kAlgoType, AlgorithmsLib::kClassification);
-  EXPECT_NO_THROW(model_dbl = gpurf_dbl->Fit(data_fit_raw_dbl, params););
+  ASSERT_NO_THROW(model_dbl = gpurf_dbl->Fit(data_fit_raw_dbl, params););
 }
 
 TEST(lib_ensembles, gpurf_predict_double_rawdata) {
   auto params = ensembles_face.CreateGpuRfParamPack();
-  params->Set(EnsemblesLib::kNrTrees, 100);
   double acc = 0;
-  EXPECT_NO_THROW(
+  ASSERT_NO_THROW(
       auto results =
           gpurf_dbl->Predict(data_predict_raw_dbl, model_dbl, params);
       acc = results->GetAccuracy(data_predict_raw_dbl->GetTargets()););
@@ -78,51 +77,48 @@ TEST(lib_ensembles, gpurf_fit_float_rawdata) {
   auto params = ensembles_face.CreateGpuRfParamPack();
   params->Set(EnsemblesLib::kNrTrees, 100);
   params->Set(EnsemblesLib::kAlgoType, AlgorithmsLib::kClassification);
-  EXPECT_NO_THROW(model_flt = gpurf_flt->Fit(data_fit_raw_flt, params););
+  ASSERT_NO_THROW(model_flt = gpurf_flt->Fit(data_fit_raw_flt, params););
 }
 
 TEST(lib_ensembles, gpurf_predict_float_rawdata) {
   auto params = ensembles_face.CreateGpuRfParamPack();
-  params->Set(EnsemblesLib::kNrTrees, 100);
   float acc = 0;
-  EXPECT_NO_THROW(
+  ASSERT_NO_THROW(
       auto results =
           gpurf_flt->Predict(data_predict_raw_flt, model_flt, params);
       acc = results->GetAccuracy(data_predict_raw_flt->GetTargets()););
   std::cout << "[          ] accuracy = " << acc << std::endl;
 }
 
-TEST(lib_ensembles, gpurf_fit_double) {
-  auto params = ensembles_face.CreateGpuRfParamPack();
-  params->Set(EnsemblesLib::kNrTrees, 100);
-  params->Set(EnsemblesLib::kAlgoType, AlgorithmsLib::kClassification);
-  EXPECT_NO_THROW(model_dbl = gpurf_dbl->Fit(data_csv_dbl, params););
-}
-
-TEST(lib_ensembles, gpurf_predict_double) {
-  auto params = ensembles_face.CreateGpuRfParamPack();
-  params->Set(EnsemblesLib::kNrTrees, 100);
-  double acc = 0;
-  EXPECT_NO_THROW(auto results =
-                      gpurf_dbl->Predict(data_csv_dbl, model_dbl, params);
-                  acc = results->GetAccuracy(data_csv_dbl->GetTargets()););
-  std::cout << "[          ] accuracy = " << acc << std::endl;
-}
-
 TEST(lib_ensembles, gpurf_fit_float_csvdata) {
   auto params = ensembles_face.CreateGpuRfParamPack();
-  params->Set(EnsemblesLib::kNrTrees, 100);
+  params->Set(EnsemblesLib::kNrTrees, 400);
   params->Set(EnsemblesLib::kAlgoType, AlgorithmsLib::kClassification);
-  EXPECT_NO_THROW(model_flt = gpurf_flt->Fit(data_csv_flt, params););
+  ASSERT_NO_THROW(model_flt = gpurf_flt->Fit(data_csv_flt, params););
 }
 
 TEST(lib_ensembles, gpurf_predict_float_csvdata) {
   auto params = ensembles_face.CreateGpuRfParamPack();
-  params->Set(EnsemblesLib::kNrTrees, 100);
   float acc = 0;
-  EXPECT_NO_THROW(auto results =
+  ASSERT_NO_THROW(auto results =
                       gpurf_flt->Predict(data_csv_flt, model_flt, params);
                   acc = results->GetAccuracy(data_csv_flt->GetTargets()););
+  std::cout << "[          ] accuracy = " << acc << std::endl;
+}
+
+TEST(lib_ensembles, gpurf_fit_double_csvdata) {
+  auto params = ensembles_face.CreateGpuRfParamPack();
+  params->Set(EnsemblesLib::kNrTrees, 100);
+  params->Set(EnsemblesLib::kAlgoType, AlgorithmsLib::kClassification);
+  ASSERT_NO_THROW(model_dbl = gpurf_dbl->Fit(data_csv_dbl, params););
+}
+
+TEST(lib_ensembles, gpurf_predict_double_csvdata) {
+  auto params = ensembles_face.CreateGpuRfParamPack();
+  double acc = 0;
+  ASSERT_NO_THROW(auto results =
+                      gpurf_dbl->Predict(data_csv_dbl, model_dbl, params);
+                  acc = results->GetAccuracy(data_csv_dbl->GetTargets()););
   std::cout << "[          ] accuracy = " << acc << std::endl;
 }
 }

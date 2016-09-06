@@ -27,26 +27,26 @@ TEST(lib_parsing, csv_parsinfile) {
 
   ASSERT_NO_THROW({
     auto data = parsininterface.ParseFile<float>(ParsingInterface::kCsv,
-                                                   "./test_data.csv");
+                                                 "./test_data.csv");
   });
   ASSERT_NO_THROW({
     auto data2 = parsininterface.ParseFile<double>(ParsingInterface::kCsv,
-                                                     "./test_data.csv");
+                                                   "./test_data.csv");
   });
 
   ASSERT_ANY_THROW({
     auto data = parsininterface.ParseFile<float>(ParsingInterface::kCsv,
-                                                   "./test_data_fail.csv");
+                                                 "./test_data_fail.csv");
   });
   ASSERT_ANY_THROW({
     auto data2 = parsininterface.ParseFile<double>(ParsingInterface::kCsv,
-                                                     "./test_data_fail.csv");
+                                                   "./test_data_fail.csv");
   });
 }
 
 TEST(lib_parsing, csv_parsindata) {
   col_array<char> raw_data(csv_data,
-                             csv_data + sizeof(csv_data) / sizeof(*csv_data));
+                           csv_data + sizeof(csv_data) / sizeof(*csv_data));
   col_array<char> raw_data_fail(
       csv_data_bad,
       csv_data_bad + sizeof(csv_data_bad) / sizeof(*csv_data_bad));
@@ -61,12 +61,12 @@ TEST(lib_parsing, csv_parsindata) {
   });
 
   ASSERT_ANY_THROW({
-    auto data = parsininterface.ParseData<float>(ParsingInterface::kCsv,
-                                                   raw_data_fail);
+    auto data =
+        parsininterface.ParseData<float>(ParsingInterface::kCsv, raw_data_fail);
   });
   ASSERT_ANY_THROW({
     auto data2 = parsininterface.ParseData<double>(ParsingInterface::kCsv,
-                                                     raw_data_fail);
+                                                   raw_data_fail);
   });
 }
 }

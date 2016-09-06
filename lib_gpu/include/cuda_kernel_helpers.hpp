@@ -41,7 +41,8 @@ class CudaKernelHelpers {
     __syncthreads();
   }
 
-  static __device__ void prescan(float *odata, float *idata, float *temp,
+  template<typename T>
+  static __device__ void prescan(T *odata, T *idata, T *temp,
                                  int n) {
     int thid = threadIdx.x;
     int offset = 1;
@@ -77,7 +78,7 @@ class CudaKernelHelpers {
           ai += CONFLICT_FREE_OFFSET(ai);
           bi += CONFLICT_FREE_OFFSET(bi);
 
-          float t = temp[ai];
+		  T t = temp[ai];
           temp[ai] = temp[bi];
           temp[bi] += t;
         }
@@ -89,7 +90,8 @@ class CudaKernelHelpers {
     }
   }
 
-  static __device__ void prefixsum(float *odata, float *idata, int n) {
+  template<typename T>
+  static __device__ void prefixsum(T *odata, T *idata, int n) {
     int thid = threadIdx.x;
     int offset = 1;
 
@@ -126,7 +128,7 @@ class CudaKernelHelpers {
           ai += CONFLICT_FREE_OFFSET(ai);
           bi += CONFLICT_FREE_OFFSET(bi);
 
-          float t = odata[ai];
+		  T t = odata[ai];
           odata[ai] = odata[bi];
           odata[bi] += t;
         }

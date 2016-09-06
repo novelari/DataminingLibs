@@ -1,4 +1,9 @@
+#define DLLExport
+#define TestExport
+
 #include "gpudte.h"
+
+#include "../../lib_gpu/source/gpu_device_cuda.h"
 
 namespace lib_ensembles {
 template <typename T>
@@ -308,22 +313,73 @@ __device__ unsigned int GpuDte::AtomicAdd(unsigned int* address,
 }
 
 __device__ double GpuDte::AtomicAdd(double* address, double value) {
-  unsigned long long oldval, newval, readback;
+  unsigned long long int* address_as_ull = (unsigned long long int*)address;
+  unsigned long long int old = *address_as_ull, assumed;
+  do {
+    assumed = old;
+    old =
+        atomicCAS(address_as_ull, assumed,
+                  __double_as_longlong(value + __longlong_as_double(assumed)));
+  } while (assumed != old);
+  return __longlong_as_double(old);
+}
 
-  oldval = __double_as_longlong(*address);
-  newval = __double_as_longlong(__longlong_as_double(oldval) + value);
+template <typename T>
+GpuDte::GpuParams<T>::GpuParams() {
+  node_cursors = nullptr;
+  probability_buffers[0] = nullptr;
+  probability_buffers[1] = nullptr;
+  node_buffers[0] = nullptr;
+  node_buffers[1] = nullptr;
+  node_buffers[2] = nullptr;
+  node_buffers_classify = nullptr;
+  node_tmp_buffer = nullptr;
+  probability_tmp_buffer = nullptr;
+  indices_buffer[0] = nullptr;
+  indices_buffer[1] = nullptr;
+  indices_inbag = nullptr;
+  target_starts = nullptr;
+  random_states = nullptr;
+  dataset = nullptr;
+  target_data = nullptr;
+  attribute_type = nullptr;
+  predictions = nullptr;
+  oobCounts = nullptr;
+  mse = nullptr;
+}
+template <typename T>
+GpuDte::GpuParams<T>::~GpuParams() {}
 
-  while ((readback = atomicCAS((unsigned long long*)address, oldval, newval)) !=
-         oldval) {
-    oldval = readback;
-    newval = __double_as_longlong(__longlong_as_double(oldval) + value);
-  }
-
-  return __longlong_as_double(oldval);
+template <typename T>
+void GpuDte::GpuParams<T>::finalize(sp<lib_gpu::GpuDevice> dev) {
+  dev->DeallocateMemory(node_cursors);
+  dev->DeallocateMemory(probability_buffers[0]);
+  dev->DeallocateMemory(probability_buffers[1]);
+  dev->DeallocateMemory(node_buffers[0]);
+  dev->DeallocateMemory(node_buffers[1]);
+  dev->DeallocateMemory(node_buffers[2]);
+  dev->DeallocateMemory(node_buffers_classify);
+  dev->DeallocateMemory(node_tmp_buffer);
+  dev->DeallocateMemory(probability_tmp_buffer);
+  dev->DeallocateMemory(indices_buffer[0]);
+  dev->DeallocateMemory(indices_buffer[1]);
+  dev->DeallocateMemory(indices_inbag);
+  dev->DeallocateMemory(target_starts);
+  dev->DeallocateMemory(random_states);
+  dev->DeallocateMemory(dataset);
+  dev->DeallocateMemory(target_data);
+  dev->DeallocateMemory(attribute_type);
+  dev->DeallocateMemory(predictions);
+  dev->DeallocateMemory(oobCounts);
+  dev->DeallocateMemory(mse);
 }
 
 template GpuDte::GpuParams<float>::GpuParams();
 template GpuDte::GpuParams<double>::GpuParams();
+template GpuDte::GpuParams<float>::~GpuParams();
+template GpuDte::GpuParams<double>::~GpuParams();
+template void GpuDte::GpuParams<float>::finalize(sp<lib_gpu::GpuDevice> dev);
+template void GpuDte::GpuParams<double>::finalize(sp<lib_gpu::GpuDevice> dev);
 
 template __device__ void GpuDte::gpudte_predict(
     int tid, int nr_instances, int data_type, int nr_targets,

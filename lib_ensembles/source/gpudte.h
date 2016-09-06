@@ -5,9 +5,14 @@
 #include <curand_kernel.h>
 #include <cassert>
 
+namespace lib_gpu {
+class GpuDevice;
+}
+
 namespace lib_ensembles {
 #define block_size_ 64
 #define max_blocks_ 1024
+#define max_tree_batch_ 100
 #define max_nominal_ 2
 #define type_classification_ 0
 #define type_regression_ 1
@@ -84,11 +89,10 @@ class GpuDte {
   template <typename T>
   class GpuParams {
    public:
-    GpuParams(){};
-    ~GpuParams() {}
+    GpuParams();
+    ~GpuParams();
 
-    void init();
-    void finalize();
+	void finalize(sp<lib_gpu::GpuDevice> dev);
 
     gpuDTE_StaticInfo *static_info;
     gpuDTE_DatasetInfo *dataset_info;
@@ -136,19 +140,16 @@ class GpuDte {
 
   template <typename T>
   static __device__ T evaluate_nominal_attribute(
-      gpuDTE_NodeHeader_Train<T> &node,
-      gpuDTE_TmpNodeValues<T> &tmp_node, T *curr_dist,
-      int att_type, int nr_targets, bool tick_tock, int **indices_buffer,
-      T *targer_data, int nr_instances, T *dataset);
+      gpuDTE_NodeHeader_Train<T> &node, gpuDTE_TmpNodeValues<T> &tmp_node,
+      T *curr_dist, int att_type, int nr_targets, bool tick_tock,
+      int **indices_buffer, T *targer_data, int nr_instances, T *dataset);
 
   template <typename T>
   static __device__ void gpudte_perform_split(
-      gpuDTE_StaticInfo &static_info,
-      gpuDTE_DatasetInfo &dataset_info,
-      gpuDTE_IterationInfo &iteration_info,
-      T **probability_buffers, T *probability_tmp, T *dataset,
-      int *attribute_types, int *node_counts, int **indices_buffers,
-      int *node_cursors,
+      gpuDTE_StaticInfo &static_info, gpuDTE_DatasetInfo &dataset_info,
+      gpuDTE_IterationInfo &iteration_info, T **probability_buffers,
+      T *probability_tmp, T *dataset, int *attribute_types, int *node_counts,
+      int **indices_buffers, int *node_cursors,
       gpuDTE_NodeHeader_Train<T> **node_buffers);
 
   template <typename T>

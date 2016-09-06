@@ -17,17 +17,12 @@ GpuAlgorithm<T>::~GpuAlgorithm() {}
 template <typename T>
 sp<lib_models::MlModel> GpuAlgorithm<T>::Fit(sp<lib_data::MlDataFrame<T>> data,
                                              sp<MlAlgorithmParams> params) {
-  auto &device = GpuLib::GetInstance().GetGpuDevice();
-  device.SetDeviceForThread(0);
-  params->Set(EnsemblesLib::kDevId, 0);
-  return device_algorithm_->Fit(data, params);
-
-  auto dev_count = device.GetDeviceCount();
+  auto device = GpuLib::GetInstance().CreateGpuDevice(0);
+  auto dev_count = device->GetDeviceCount();
   auto param_vec = SplitParameterPack(params, dev_count);
   col_array<sp<lib_models::MlModel>> models(dev_count,
                                             sp<lib_models::MlModel>());
   auto run_func = [&](int i) {
-    device.SetDeviceForThread(i);
     param_vec[i]->Set(EnsemblesLib::kDevId, i);
     models[i] = device_algorithm_->Fit(data, param_vec[i]);
   };
@@ -39,18 +34,13 @@ template <typename T>
 sp<lib_data::MlResultData<T>> GpuAlgorithm<T>::Predict(
     sp<lib_data::MlDataFrame<T>> data, sp<lib_models::MlModel> model,
     sp<MlAlgorithmParams> params) {
-  auto &device = GpuLib::GetInstance().GetGpuDevice();
-  device.SetDeviceForThread(0);
-  params->Set(EnsemblesLib::kDevId, 0);
-  return device_algorithm_->Predict(data, model, params);
-
-  auto dev_count = device.GetDeviceCount();
+  auto &device = GpuLib::GetInstance().CreateGpuDevice(0);
+  auto dev_count = device->GetDeviceCount();
   auto param_vec = SplitParameterPack(params, dev_count);
   auto model_vec = SplitModel(model, dev_count);
   col_array<sp<lib_data::MlResultData<T>>> results(
       dev_count, sp<lib_data::MlResultData<T>>());
   auto run_func = [&](int i) {
-    device.SetDeviceForThread(i);
     param_vec[i]->Set(EnsemblesLib::kDevId, i);
     results[i] = device_algorithm_->Predict(data, model_vec[i], param_vec[i]);
   };
