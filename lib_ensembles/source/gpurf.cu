@@ -20,7 +20,7 @@ __constant__ GpuDte::gpuDTE_DatasetInfo dataset_info;
 __constant__ GpuDte::gpuDTE_IterationInfo iteration_info;
 
 __host__ void cpy_iteration_info(GpuDte::gpuDTE_IterationInfo* info) {
-  cudaError_t error = cudaMemcpyToSymbol(lib_ensembles::iteration_info, info,
+  cudaError_t error = cudaMemcpyToSymbol(iteration_info, info,
                                          sizeof(GpuDte::gpuDTE_IterationInfo),
                                          0, cudaMemcpyHostToDevice);
   if (error != cudaSuccess) CoreLib::GetInstance().ThrowException("Cuda error");
@@ -28,11 +28,11 @@ __host__ void cpy_iteration_info(GpuDte::gpuDTE_IterationInfo* info) {
 
 __host__ void cpy_data_static_info(GpuDte::gpuDTE_DatasetInfo* data,
                                    GpuDte::gpuDTE_StaticInfo* info) {
-  cudaError_t error = cudaMemcpyToSymbol(lib_ensembles::dataset_info, data,
+  cudaError_t error = cudaMemcpyToSymbol(dataset_info, data,
                                          sizeof(GpuDte::gpuDTE_DatasetInfo), 0,
                                          cudaMemcpyHostToDevice);
   if (error != cudaSuccess) CoreLib::GetInstance().ThrowException("Cuda error");
-  error = cudaMemcpyToSymbol(lib_ensembles::static_info, info,
+  error = cudaMemcpyToSymbol(static_info, info,
                              sizeof(GpuDte::gpuDTE_StaticInfo), 0,
                              cudaMemcpyHostToDevice);
   if (error != cudaSuccess) CoreLib::GetInstance().ThrowException("Cuda error");
