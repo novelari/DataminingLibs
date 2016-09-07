@@ -21,7 +21,7 @@ Browse into the newly created __project_files_cmake_win64__ directory where you 
 
 Compiling on Unix
 ---------------------
-Tested to work on Ubuntu 16.04 LTS (GCC 5.4) and Cuda toolkit 8.0rc (with the 8.0.27.1 patch for GCC 5.4 support)
+Tested to work on Ubuntu 16.04 LTS (GCC 5.4) with Cuda toolkit 8.0rc (with the 8.0.27.1 patch for GCC 5.4 support)
 
 Build the make files using the following script:
     
