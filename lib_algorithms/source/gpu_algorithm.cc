@@ -34,7 +34,7 @@ template <typename T>
 sp<lib_data::MlResultData<T>> GpuAlgorithm<T>::Predict(
     sp<lib_data::MlDataFrame<T>> data, sp<lib_models::MlModel> model,
     sp<MlAlgorithmParams> params) {
-  auto &device = GpuLib::GetInstance().CreateGpuDevice(0);
+  auto device = GpuLib::GetInstance().CreateGpuDevice(0);
   auto dev_count = device->GetDeviceCount();
   auto param_vec = SplitParameterPack(params, dev_count);
   auto model_vec = SplitModel(model, dev_count);
