@@ -11,19 +11,28 @@ set(dir_list
 	../lib_gpu/include
 	../lib_core/include
 	../lib_parsing/include
+	../lib_algorithms/include
 )
 
 set(cpp_files
 	./test/test_gpurf.h
+	./test/test_gpuert.h
+	./test/test_resources.h
 
 	../source_shared/precomp.h
 	./include/lib_ensembles.h
 	./include/ensembles_interface.h	
 	./source/gpurf.h
 	./source/gpudte.h
+	./source/gpuert.h
+	./source/gpudte_algorithm.h
+	./source/gpudte_algorithm_shared.h
 
 	./source/gpurf.cu
 	./source/gpudte.cu
+	./source/gpuert.cu
+	./source/gpudte_algorithm.cc
+	./source/gpudte_algorithm_shared.cc
 	../source_shared/precomp.cc
 	./source/ensembles_interface.cc
 )
@@ -31,9 +40,15 @@ set(cpp_files
 source_group(source FILES
 	./source/gpurf.h
 	./source/gpudte.h
+	./source/gpuert.h
+	./source/gpudte_algorithm.h
+	./source/gpudte_algorithm_shared.h
 
 	./source/gpurf.cu
 	./source/gpudte.cu
+	./source/gpuert.cu
+	./source/gpudte_algorithm.cc
+	./source/gpudte_algorithm_shared.cc
 )
 
 source_group(interface FILES
@@ -45,6 +60,8 @@ source_group(interface FILES
 
 source_group(test FILES
 	./test/test_gpurf.h
+	./test/test_gpuert.h
+	./test/test_resources.h
 )
 
 source_group(precomp FILES

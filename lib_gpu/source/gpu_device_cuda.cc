@@ -18,10 +18,14 @@ void GpuDeviceCuda::PushContextOnThread() {
 }
 
 void GpuDeviceCuda::SynchronizeDevice(int stream) {
+  CUresult error;
   if (stream == -1)
-    cuCtxSynchronize();
+    error = cuCtxSynchronize();
   else
-    cuStreamSynchronize(cuda_context_->streams_[stream]);
+    error = cuStreamSynchronize(cuda_context_->streams_[stream]);
+  if (error != CUDA_SUCCESS)
+    lib_core::CoreInterface::GetInstance().ThrowException(
+        "Cuda deallocation failed.");
 }
 void GpuDeviceCuda::DeallocateMemory(void *dev_ptr) {
   CUresult error = cuMemFree(reinterpret_cast<CUdeviceptr>(dev_ptr));

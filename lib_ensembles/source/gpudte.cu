@@ -1,26 +1,81 @@
 #define DLLExport
 #define TestExport
 
+#include "../../source_shared/include/global_defines.h"
+
 #include "gpudte.h"
 
+#include "../../lib_core/include/lib_core.h"
 #include "../../lib_gpu/source/gpu_device_cuda.h"
 
 namespace lib_ensembles {
+__device__ __constant__ GpuDteAlgorithmShared::gpuDTE_StaticInfo static_info;
+__device__ __constant__ GpuDteAlgorithmShared::gpuDTE_DatasetInfo dataset_info;
+__device__ __constant__
+    GpuDteAlgorithmShared::gpuDTE_IterationInfo iteration_info;
+
+__host__ void cpy_iteration_info(
+    GpuDteAlgorithmShared::gpuDTE_IterationInfo* info) {
+  cudaError_t error = cudaMemcpyToSymbol(
+      iteration_info, info, sizeof(GpuDteAlgorithmShared::gpuDTE_IterationInfo),
+      0, cudaMemcpyHostToDevice);
+  if (error != cudaSuccess)
+    CoreLib::GetInstance().ThrowException("Cuda error.");
+}
+
+__host__ void cpy_data_static_info(
+    GpuDteAlgorithmShared::gpuDTE_DatasetInfo* data,
+    GpuDteAlgorithmShared::gpuDTE_StaticInfo* info) {
+  cudaError_t error = cudaMemcpyToSymbol(
+      dataset_info, data, sizeof(GpuDteAlgorithmShared::gpuDTE_DatasetInfo), 0,
+      cudaMemcpyHostToDevice);
+  if (error != cudaSuccess)
+    CoreLib::GetInstance().ThrowException("Cuda error.");
+  error = cudaMemcpyToSymbol(static_info, info,
+                             sizeof(GpuDteAlgorithmShared::gpuDTE_StaticInfo),
+                             0, cudaMemcpyHostToDevice);
+  if (error != cudaSuccess)
+    CoreLib::GetInstance().ThrowException("Cuda error.");
+}
+
 template <typename T>
-__device__ T GpuDte::get_data_point(int attribute, int instance,
-                                    int nr_instances, T* dataset) {
+void GpuDte<T>::CopyIterationInfo(
+    GpuDteAlgorithmShared::gpuDTE_IterationInfo& info) {
+  cpy_iteration_info(&info);
+}
+
+template <typename T>
+void GpuDte<T>::CopyDataStaticInfo(
+    GpuDteAlgorithmShared::gpuDTE_DatasetInfo& data,
+    GpuDteAlgorithmShared::gpuDTE_StaticInfo& info) {
+  cpy_data_static_info(&data, &info);
+}
+
+template <typename T>
+__device__ void GpuDte<T>::GetConstPointers(
+    GpuDteAlgorithmShared::gpuDTE_IterationInfo** iter,
+    GpuDteAlgorithmShared::gpuDTE_DatasetInfo** data,
+    GpuDteAlgorithmShared::gpuDTE_StaticInfo** stat) {
+  *iter = &iteration_info;
+  *data = &dataset_info;
+  *stat = &static_info;
+}
+
+template <typename T>
+__device__ T GpuDte<T>::get_data_point(int attribute, int instance,
+                                       int nr_instances, T* dataset) {
   return dataset[attribute * nr_instances + instance];
 }
 
 template <typename T>
-__device__ T GpuDte::lnFunc(T num) {
+__device__ T GpuDte<T>::lnFunc(T num) {
   if (num <= 1e-6) return 0;
   return num * log(num);
 }
 
 template <typename T>
-__device__ T GpuDte::entropy_conditioned_on_rows(T* matrix, int att_type,
-                                                 int nr_targets) {
+__device__ T GpuDte<T>::entropy_conditioned_on_rows(T* matrix, int att_type,
+                                                    int nr_targets) {
   int x = (att_type > max_nominal_) ? 2 : att_type;
   int y = nr_targets;
 
@@ -41,8 +96,8 @@ __device__ T GpuDte::entropy_conditioned_on_rows(T* matrix, int att_type,
 }
 
 template <typename T>
-__device__ T GpuDte::entropy_over_columns(T* matrix, int att_type,
-                                          int nr_targets) {
+__device__ T GpuDte<T>::entropy_over_columns(T* matrix, int att_type,
+                                             int nr_targets) {
   int x = (att_type > max_nominal_) ? 2 : att_type;
   int y = nr_targets;
 
@@ -62,10 +117,11 @@ __device__ T GpuDte::entropy_over_columns(T* matrix, int att_type,
 }
 
 template <typename T>
-__device__ T GpuDte::evaluate_nominal_attribute(
-    gpuDTE_NodeHeader_Train<T>& node, gpuDTE_TmpNodeValues<T>& tmp_node,
-    T* curr_dist, int att_type, int nr_targets, bool tick_tock,
-    int** indices_buffer, T* targer_data, int nr_instances, T* dataset) {
+__device__ T GpuDte<T>::evaluate_nominal_attribute(
+    GpuDteAlgorithmShared::gpuDTE_NodeHeader_Train<T>& node,
+    GpuDteAlgorithmShared::gpuDTE_TmpNodeValues<T>& tmp_node, T* curr_dist,
+    int att_type, int nr_targets, bool tick_tock, int** indices_buffer,
+    T* targer_data, int nr_instances, T* dataset) {
   int numInds = node.node_index_count;
   int nodeIndStart = node.node_index_start;
   T weight = 1;
@@ -98,13 +154,15 @@ __device__ T GpuDte::evaluate_nominal_attribute(
 }
 
 template <typename T>
-__device__ void GpuDte::gpudte_perform_split(
-    gpuDTE_StaticInfo& static_info, gpuDTE_DatasetInfo& dataset_info,
-    gpuDTE_IterationInfo& iteration_info, T** probability_buffers,
-    T* probability_tmp, T* dataset, int* attribute_types, int* node_counts,
-    int** indices_buffers, int* node_cursors,
-    gpuDTE_NodeHeader_Train<T>** node_buffers) {
-  __shared__ gpuDTE_NodeHeader_Train<T> s_tree_node;
+__device__ void GpuDte<T>::gpudte_perform_split(
+    GpuDteAlgorithmShared::gpuDTE_StaticInfo& static_info,
+    GpuDteAlgorithmShared::gpuDTE_DatasetInfo& dataset_info,
+    GpuDteAlgorithmShared::gpuDTE_IterationInfo& iteration_info,
+    T** probability_buffers, T* probability_tmp, T* dataset,
+    int* attribute_types, int* node_counts, int** indices_buffers,
+    int* node_cursors,
+    GpuDteAlgorithmShared::gpuDTE_NodeHeader_Train<T>** node_buffers) {
+  __shared__ GpuDteAlgorithmShared::gpuDTE_NodeHeader_Train<T> s_tree_node;
   __shared__ int s_attribute_type;
 
   if (threadIdx.x == 0) {
@@ -180,8 +238,8 @@ __device__ void GpuDte::gpudte_perform_split(
     if (dataset_info.data_type == type_regression_)
       node_counts[1] = s_tree_node.node_index_count;
 
-    gpuDTE_NodeHeader_Train<T> child;
-    child.parent_id = s_tree_node.trackinid;
+    GpuDteAlgorithmShared::gpuDTE_NodeHeader_Train<T> child;
+    child.parent_id = s_tree_node.tracking_id;
 
     bool skip_split = false;
     int index_offset = 0;
@@ -204,7 +262,7 @@ __device__ void GpuDte::gpudte_perform_split(
       index_offset = 0;
       child.node_index_start = s_tree_node.node_index_start;
       for (int i = 0; i < child_count; ++i) {
-        child.trackinid = AtomicAdd(&node_cursors[node_id_], 1);
+        child.tracking_id = AtomicAdd(&node_cursors[node_id_], 1);
         child.node_index_count = node_counts[i] - index_offset;
         index_offset += node_counts[i];
 
@@ -251,10 +309,10 @@ __device__ void GpuDte::gpudte_perform_split(
 }
 
 template <typename T>
-__device__ void GpuDte::gpudte_predict(
+__device__ void GpuDte<T>::gpudte_predict(
     int tid, int nr_instances, int data_type, int nr_targets,
-    gpuDTE_NodeHeader_Classify<T>* node_buffer, T* dataset,
-    T* probability_buffer, T* predictions, int* attribute_types) {
+    GpuDteAlgorithmShared::gpuDTE_NodeHeader_Classify<T>* node_buffer,
+    T* dataset, T* probability_buffer, T* predictions, int* attribute_types) {
   // Access pattern
   // instances*trees: 5*5 = 25
   // tid:			0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18
@@ -265,7 +323,8 @@ __device__ void GpuDte::gpudte_predict(
   int treeId = T(tid) / T(nr_instances);
   T dataPoint;
 
-  gpuDTE_NodeHeader_Classify<T> tree_node = node_buffer[treeId];
+  GpuDteAlgorithmShared::gpuDTE_NodeHeader_Classify<T> tree_node =
+      node_buffer[treeId];
   while (tree_node.child_count > 0) {
     dataPoint =
         get_data_point(tree_node.attribute, instanceId, nr_instances, dataset);
@@ -299,20 +358,24 @@ __device__ void GpuDte::gpudte_predict(
   }
 }
 
-__device__ float GpuDte::AtomicAdd(float* address, float value) {
+template <typename T>
+__device__ float GpuDte<T>::AtomicAdd(float* address, float value) {
   return atomicAdd(address, value);
 }
 
-__device__ int GpuDte::AtomicAdd(int* address, int value) {
+template <typename T>
+__device__ int GpuDte<T>::AtomicAdd(int* address, int value) {
   return atomicAdd(address, value);
 }
 
-__device__ unsigned int GpuDte::AtomicAdd(unsigned int* address,
-                                          unsigned int value) {
+template <typename T>
+__device__ unsigned int GpuDte<T>::AtomicAdd(unsigned int* address,
+                                             unsigned int value) {
   return atomicAdd(address, value);
 }
 
-__device__ double GpuDte::AtomicAdd(double* address, double value) {
+template <typename T>
+__device__ double GpuDte<T>::AtomicAdd(double* address, double value) {
   unsigned long long int* address_as_ull = (unsigned long long int*)address;
   unsigned long long int old = *address_as_ull, assumed;
   do {
@@ -324,120 +387,114 @@ __device__ double GpuDte::AtomicAdd(double* address, double value) {
   return __longlong_as_double(old);
 }
 
-template <typename T>
-GpuDte::GpuParams<T>::GpuParams() {
-  node_cursors = nullptr;
-  probability_buffers[0] = nullptr;
-  probability_buffers[1] = nullptr;
-  node_buffers[0] = nullptr;
-  node_buffers[1] = nullptr;
-  node_buffers[2] = nullptr;
-  node_buffers_classify = nullptr;
-  node_tmp_buffer = nullptr;
-  probability_tmp_buffer = nullptr;
-  indices_buffer[0] = nullptr;
-  indices_buffer[1] = nullptr;
-  indices_inbag = nullptr;
-  target_starts = nullptr;
-  random_states = nullptr;
-  dataset = nullptr;
-  target_data = nullptr;
-  attribute_type = nullptr;
-  predictions = nullptr;
-  oobCounts = nullptr;
-  mse = nullptr;
-}
-template <typename T>
-GpuDte::GpuParams<T>::~GpuParams() {}
+template GpuDte<float>::GpuDte();
+template GpuDte<double>::GpuDte();
 
-template <typename T>
-void GpuDte::GpuParams<T>::finalize(sp<lib_gpu::GpuDevice> dev) {
-  dev->DeallocateMemory(node_cursors);
-  dev->DeallocateMemory(probability_buffers[0]);
-  dev->DeallocateMemory(probability_buffers[1]);
-  dev->DeallocateMemory(node_buffers[0]);
-  dev->DeallocateMemory(node_buffers[1]);
-  dev->DeallocateMemory(node_buffers[2]);
-  dev->DeallocateMemory(node_buffers_classify);
-  dev->DeallocateMemory(node_tmp_buffer);
-  dev->DeallocateMemory(probability_tmp_buffer);
-  dev->DeallocateMemory(indices_buffer[0]);
-  dev->DeallocateMemory(indices_buffer[1]);
-  dev->DeallocateMemory(indices_inbag);
-  dev->DeallocateMemory(target_starts);
-  dev->DeallocateMemory(random_states);
-  dev->DeallocateMemory(dataset);
-  dev->DeallocateMemory(target_data);
-  dev->DeallocateMemory(attribute_type);
-  dev->DeallocateMemory(predictions);
-  dev->DeallocateMemory(oobCounts);
-  dev->DeallocateMemory(mse);
-}
-
-template GpuDte::GpuParams<float>::GpuParams();
-template GpuDte::GpuParams<double>::GpuParams();
-template GpuDte::GpuParams<float>::~GpuParams();
-template GpuDte::GpuParams<double>::~GpuParams();
-template void GpuDte::GpuParams<float>::finalize(sp<lib_gpu::GpuDevice> dev);
-template void GpuDte::GpuParams<double>::finalize(sp<lib_gpu::GpuDevice> dev);
-
-template __device__ void GpuDte::gpudte_predict(
+template __device__ void GpuDte<float>::gpudte_predict(
     int tid, int nr_instances, int data_type, int nr_targets,
-    gpuDTE_NodeHeader_Classify<float>* node_buffer, float* dataset,
-    float* probability_buffer, float* predictions, int* attribute_types);
-template __device__ void GpuDte::gpudte_predict(
+    GpuDteAlgorithmShared::gpuDTE_NodeHeader_Classify<float>* node_buffer,
+    float* dataset, float* probability_buffer, float* predictions,
+    int* attribute_types);
+template __device__ void GpuDte<double>::gpudte_predict(
     int tid, int nr_instances, int data_type, int nr_targets,
-    gpuDTE_NodeHeader_Classify<double>* node_buffer, double* dataset,
-    double* probability_buffer, double* predictions, int* attribute_types);
+    GpuDteAlgorithmShared::gpuDTE_NodeHeader_Classify<double>* node_buffer,
+    double* dataset, double* probability_buffer, double* predictions,
+    int* attribute_types);
 
-template __device__ void GpuDte::gpudte_perform_split(
-    gpuDTE_StaticInfo& static_info, gpuDTE_DatasetInfo& dataset_info,
-    gpuDTE_IterationInfo& iteration_info, float** probability_buffers,
-    float* probability_tmp, float* dataset, int* attribute_types,
-    int* node_counts, int** indices_buffers, int* node_cursors,
-    gpuDTE_NodeHeader_Train<float>** node_buffers);
+template __device__ void GpuDte<float>::gpudte_perform_split(
+    GpuDteAlgorithmShared::gpuDTE_StaticInfo& static_info,
+    GpuDteAlgorithmShared::gpuDTE_DatasetInfo& dataset_info,
+    GpuDteAlgorithmShared::gpuDTE_IterationInfo& iteration_info,
+    float** probability_buffers, float* probability_tmp, float* dataset,
+    int* attribute_types, int* node_counts, int** indices_buffers,
+    int* node_cursors,
+    GpuDteAlgorithmShared::gpuDTE_NodeHeader_Train<float>** node_buffers);
 
-template __device__ void GpuDte::gpudte_perform_split(
-    gpuDTE_StaticInfo& static_info, gpuDTE_DatasetInfo& dataset_info,
-    gpuDTE_IterationInfo& iteration_info, double** probability_buffers,
-    double* probability_tmp, double* dataset, int* attribute_types,
-    int* node_counts, int** indices_buffers, int* node_cursors,
-    gpuDTE_NodeHeader_Train<double>** node_buffers);
+template __device__ void GpuDte<double>::gpudte_perform_split(
+    GpuDteAlgorithmShared::gpuDTE_StaticInfo& static_info,
+    GpuDteAlgorithmShared::gpuDTE_DatasetInfo& dataset_info,
+    GpuDteAlgorithmShared::gpuDTE_IterationInfo& iteration_info,
+    double** probability_buffers, double* probability_tmp, double* dataset,
+    int* attribute_types, int* node_counts, int** indices_buffers,
+    int* node_cursors,
+    GpuDteAlgorithmShared::gpuDTE_NodeHeader_Train<double>** node_buffers);
 
-template __device__ float GpuDte::evaluate_nominal_attribute(
-    gpuDTE_NodeHeader_Train<float>& node, gpuDTE_TmpNodeValues<float>& tmp_node,
+template __device__ float GpuDte<float>::evaluate_nominal_attribute(
+    GpuDteAlgorithmShared::gpuDTE_NodeHeader_Train<float>& node,
+    GpuDteAlgorithmShared::gpuDTE_TmpNodeValues<float>& tmp_node,
     float* curr_dist, int att_type, int nr_targets, bool tick_tock,
     int** indices_buffer, float* targer_data, int nr_instances, float* dataset);
 
-template __device__ double GpuDte::evaluate_nominal_attribute(
-    gpuDTE_NodeHeader_Train<double>& node,
-    gpuDTE_TmpNodeValues<double>& tmp_node, double* curr_dist, int att_type,
-    int nr_targets, bool tick_tock, int** indices_buffer, double* targer_data,
-    int nr_instances, double* dataset);
+template __device__ double GpuDte<double>::evaluate_nominal_attribute(
+    GpuDteAlgorithmShared::gpuDTE_NodeHeader_Train<double>& node,
+    GpuDteAlgorithmShared::gpuDTE_TmpNodeValues<double>& tmp_node,
+    double* curr_dist, int att_type, int nr_targets, bool tick_tock,
+    int** indices_buffer, double* targer_data, int nr_instances,
+    double* dataset);
 
-template __device__ float GpuDte::entropy_conditioned_on_rows(float* matrix,
+template __device__ float GpuDte<float>::entropy_conditioned_on_rows(
+    float* matrix, int att_type, int nr_targets);
+
+template __device__ double GpuDte<double>::entropy_conditioned_on_rows(
+    double* matrix, int att_type, int nr_targets);
+
+template __device__ float GpuDte<float>::entropy_over_columns(float* matrix,
                                                               int att_type,
                                                               int nr_targets);
+template __device__ double GpuDte<double>::entropy_over_columns(double* matrix,
+                                                                int att_type,
+                                                                int nr_targets);
 
-template __device__ double GpuDte::entropy_conditioned_on_rows(double* matrix,
-                                                               int att_type,
-                                                               int nr_targets);
+template __device__ float GpuDte<float>::get_data_point(int attribute,
+                                                        int instance,
+                                                        int nr_instances,
+                                                        float* dataset);
+template __device__ double GpuDte<double>::get_data_point(int attribute,
+                                                          int instance,
+                                                          int nr_instances,
+                                                          double* dataset);
 
-template __device__ float GpuDte::entropy_over_columns(float* matrix,
-                                                       int att_type,
-                                                       int nr_targets);
-template __device__ double GpuDte::entropy_over_columns(double* matrix,
-                                                        int att_type,
-                                                        int nr_targets);
+template __device__ float GpuDte<float>::lnFunc(float num);
 
-template __device__ float GpuDte::get_data_point(int attribute, int instance,
-                                                 int nr_instances,
-                                                 float* dataset);
-template __device__ double GpuDte::get_data_point(int attribute, int instance,
-                                                  int nr_instances,
-                                                  double* dataset);
+template __device__ double GpuDte<double>::lnFunc(double num);
 
-template __device__ float GpuDte::lnFunc(float num);
+template __device__ float GpuDte<float>::AtomicAdd(float* address, float value);
+template __device__ float GpuDte<double>::AtomicAdd(float* address,
+                                                    float value);
 
-template __device__ double GpuDte::lnFunc(double num);
+template __device__ int GpuDte<float>::AtomicAdd(int* address, int value);
+template __device__ int GpuDte<double>::AtomicAdd(int* address, int value);
+
+template __device__ unsigned int GpuDte<float>::AtomicAdd(unsigned int* address,
+                                                          unsigned int value);
+template __device__ unsigned int GpuDte<double>::AtomicAdd(
+    unsigned int* address, unsigned int value);
+
+template __device__ double GpuDte<float>::AtomicAdd(double* address,
+                                                    double value);
+template __device__ double GpuDte<double>::AtomicAdd(double* address,
+                                                     double value);
+
+template __device__ void GpuDte<float>::GetConstPointers(
+    GpuDteAlgorithmShared::gpuDTE_IterationInfo** iter,
+    GpuDteAlgorithmShared::gpuDTE_DatasetInfo** data,
+    GpuDteAlgorithmShared::gpuDTE_StaticInfo** stat);
+template __device__ void GpuDte<double>::GetConstPointers(
+    GpuDteAlgorithmShared::gpuDTE_IterationInfo** iter,
+    GpuDteAlgorithmShared::gpuDTE_DatasetInfo** data,
+    GpuDteAlgorithmShared::gpuDTE_StaticInfo** stat);
+
+template
+void GpuDte<float>::CopyDataStaticInfo(
+	GpuDteAlgorithmShared::gpuDTE_DatasetInfo& data,
+	GpuDteAlgorithmShared::gpuDTE_StaticInfo& info);
+template
+void GpuDte<double>::CopyDataStaticInfo(
+	GpuDteAlgorithmShared::gpuDTE_DatasetInfo& data,
+	GpuDteAlgorithmShared::gpuDTE_StaticInfo& info);
+
+template void GpuDte<float>::CopyIterationInfo(
+    GpuDteAlgorithmShared::gpuDTE_IterationInfo& info);
+template void GpuDte<double>::CopyIterationInfo(
+    GpuDteAlgorithmShared::gpuDTE_IterationInfo& info);
 }
