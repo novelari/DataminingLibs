@@ -1,8 +1,10 @@
 #define DLLExport
 #define TestExport
 
-#include "gpuert.h"
+#include "../../source_shared/include/global_defines.h"
+
 #include "../../lib_core/include/lib_core.h"
+#include "gpuert.h"
 
 namespace lib_ensembles {
 template <typename T>
@@ -83,7 +85,7 @@ __device__ void GpuErt<T>::gpuert_initialize_tree_batch(
            ii < params->dataset_info->nr_instances /
                     params->dataset_info->nr_target_values;
            ii += blockDim.x) {
-        localCursor = AtomicAdd(&s_indexCursor, 1);
+        localCursor = GpuDte<T>::AtomicAdd(&s_indexCursor, 1);
         if (targetEnd - targetStart > 0)
           randVal =
               targetStart + curand(&localState) % (targetEnd - targetStart);
@@ -106,7 +108,7 @@ __device__ void GpuErt<T>::gpuert_initialize_tree_batch(
     root.parent_id = -2;
     root.attribute = -2;
     root.split_point = -2;
-    root.tracking_id = AtomicAdd(&params->node_cursors[node_id_], 1);
+    root.tracking_id = GpuDte<T>::AtomicAdd(&params->node_cursors[node_id_], 1);
     root.node_index_start = treeOffset;
     root.node_index_count = s_indexCursor;
 
@@ -171,7 +173,7 @@ __device__ void GpuErt<T>::gpuert_find_split(
                                  s_tree_node.node_index_start],
           params->dataset_info->nr_instances, params->dataset);
 
-      AtomicAdd(&s_tmp_node.tmp_split, dat);
+      GpuDte<T>::AtomicAdd(&s_tmp_node.tmp_split, dat);
     }
 
     __syncthreads();
@@ -290,12 +292,12 @@ __device__ T GpuErt<T>::eval_numeric_attribute(
                          params->dataset_info->nr_instances, params->dataset);
 
     if (val != -flt_max)
-      AtomicAdd(&curr_dist[params->dataset_info->nr_target_values *
-                               ((val < tmp_node.tmp_split) ? 0 : 1) +
-                           int(params->target_data[inst])],
-                weight);
+      GpuDte<T>::AtomicAdd(&curr_dist[params->dataset_info->nr_target_values *
+                                          ((val < tmp_node.tmp_split) ? 0 : 1) +
+                                      int(params->target_data[inst])],
+                           weight);
     else
-      AtomicAdd(&curr_dist[int(params->target_data[inst])], weight);
+      GpuDte<T>::AtomicAdd(&curr_dist[int(params->target_data[inst])], weight);
   }
 
   __syncthreads();
@@ -350,9 +352,9 @@ __device__ T GpuErt<T>::varianceCalculation(
                          params->dataset);
     int t = node.node_index_count;
     if (val != -flt_max && t > 0) {
-      AtomicAdd(&curr_dist[(val < tmp_node.tmp_split) ? 0 : 1], 1);
-      AtomicAdd(&s_means[(val < tmp_node.tmp_split) ? 0 : 1],
-                params->target_data[inst]);
+      GpuDte<T>::AtomicAdd(&curr_dist[(val < tmp_node.tmp_split) ? 0 : 1], 1);
+      GpuDte<T>::AtomicAdd(&s_means[(val < tmp_node.tmp_split) ? 0 : 1],
+                           params->target_data[inst]);
     }
   }
 
