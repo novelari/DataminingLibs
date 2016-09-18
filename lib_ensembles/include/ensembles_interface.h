@@ -15,7 +15,11 @@ class DLLExport EnsemblesInterface {
   */
   template <typename T>
   sp<lib_algorithms::MlAlgorithm<T>> CreateGpuRfAlgorithm();
+  template<typename T>
+  sp<lib_algorithms::MlAlgorithm<T>> CreateGpuErtAlgorithm();
+
   sp<lib_algorithms::MlAlgorithmParams> CreateGpuRfParamPack();
+  sp<lib_algorithms::MlAlgorithmParams> CreateGpuErtParamPack();
   enum CommonParams {
     kDevId = 0,
 
