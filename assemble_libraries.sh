@@ -1,6 +1,6 @@
 rm -rf datamininglibs_x64
 mkdir datamininglibs_x64
-libs_array=(lib_algorithms lib_data lib_julia lib_models lib_parsing lib_gpu lib_core lib_ensembles)
+libs_array=(lib_juliacall lib_algorithms lib_data lib_julia lib_models lib_parsing lib_gpu lib_core lib_ensembles)
 cd datamininglibs_x64
 mkdir include
 cd ./include
