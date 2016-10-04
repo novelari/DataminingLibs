@@ -1,5 +1,5 @@
 #pragma once
-#include "test_resources.h"
+#include "../lib_ensembles/test/test_resources.h"
 
 namespace test_gpurf {
 auto &algorithms_face = AlgorithmsLib::GetInstance();
@@ -28,23 +28,23 @@ TEST(lib_ensembles_gpurf, predict_float_rawdata) {
 	std::cout << "[          ] accuracy = " << acc << std::endl;
 }
 
-TEST(lib_ensembles_gpurf, fit_float_csvdata) {
-  auto params = ensembles_face.CreateGpuRfParamPack();
-  params->Set(EnsemblesLib::kNrTrees, 400);
-  params->Set(EnsemblesLib::kAlgoType, AlgorithmsLib::kClassification);
-  ASSERT_NO_THROW(model_flt =
-                      gpurf_flt->Fit(lib_ensembles::data_csv_flt, params););
-}
-
-TEST(lib_ensembles_gpurf, predict_float_csvdata) {
-  auto params = ensembles_face.CreateGpuRfParamPack();
-  float acc = 0;
-  ASSERT_NO_THROW(
-      auto results =
-          gpurf_flt->Predict(lib_ensembles::data_csv_flt, model_flt, params);
-      acc = results->GetAccuracy(lib_ensembles::data_csv_flt->GetTargets()););
-  std::cout << "[          ] accuracy = " << acc << std::endl;
-}
+//TEST(lib_ensembles_gpurf, fit_float_csvdata) {
+//  auto params = ensembles_face.CreateGpuRfParamPack();
+//  params->Set(EnsemblesLib::kNrTrees, 400);
+//  params->Set(EnsemblesLib::kAlgoType, AlgorithmsLib::kClassification);
+//  ASSERT_NO_THROW(model_flt =
+//                      gpurf_flt->Fit(lib_ensembles::data_csv_flt, params););
+//}
+//
+//TEST(lib_ensembles_gpurf, predict_float_csvdata) {
+//  auto params = ensembles_face.CreateGpuRfParamPack();
+//  float acc = 0;
+//  ASSERT_NO_THROW(
+//      auto results =
+//          gpurf_flt->Predict(lib_ensembles::data_csv_flt, model_flt, params);
+//      acc = results->GetAccuracy(lib_ensembles::data_csv_flt->GetTargets()););
+//  std::cout << "[          ] accuracy = " << acc << std::endl;
+//}
 
 /*TEST(lib_ensembles_gpurf, fit_double_rawdata) {
 	auto params = ensembles_face.CreateGpuRfParamPack();

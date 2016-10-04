@@ -44,8 +44,8 @@ auto data_fit_raw_flt = parser_face.ParseData<float>(
 auto data_predict_raw_flt = parser_face.ParseData<float>(
     lib_parsing::ParsingInterface::kCsv, raw_data_predict);
 
-auto data_csv_dbl = parser_face.ParseFile<double>(
-    lib_parsing::ParsingInterface::kCsv, "../../runnable_test/spambase.csv");
-auto data_csv_flt = parser_face.ParseFile<float>(
-    lib_parsing::ParsingInterface::kCsv, "../../runnable_test/spambase.csv");
+//auto data_csv_dbl = parser_face.ParseFile<double>(
+//    lib_parsing::ParsingInterface::kCsv, "../../runnable_test/spambase.csv");
+//auto data_csv_flt = parser_face.ParseFile<float>(
+//    lib_parsing::ParsingInterface::kCsv, "../../runnable_test/spambase.csv");
 }
