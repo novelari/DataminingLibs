@@ -1,8 +1,10 @@
-#pragma once
+#define DLLExport
+#define TestExport
+
 #include "test_resources.h"
 
 
-bool fitData (){
+bool fitData (int x){
 	auto &algorithms_face = AlgorithmsLib::GetInstance();
 	auto &ensembles_face = EnsemblesLib::GetInstance();
 

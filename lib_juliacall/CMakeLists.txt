@@ -32,11 +32,17 @@ set(dir_list
 )
 
 set(cpp_files
+	../source_shared/precomp.h
+	../source_shared/precomp.cc
 	julia_to_c.cc
 )
 
 source_group(source FILES
 	julia_to_c.cc
+)
+source_group(precomp FILES
+	../source_shared/precomp.h
+	../source_shared/precomp.cc
 )
 
 add_library(lib_juliacall SHARED ${cpp_files})
